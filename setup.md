@@ -8,19 +8,9 @@ Author: Ed Jenkins <ed@andexor.net>
 
 Most projects have certain pre-requisites that are required for development, testing, or running in production. Install the ones that are needed.
 
-## Bun
-
-For projects written in TypeScript, use Bun for package management, builds, and execution.
-Install it with this script.
-
-> Run `install-bun.sh`
-
 ## NodeJS
 
-I like to use Bun for best performance.
-Cloudflare does not support Bun. It uses NodeJS.
-For static websites, you can build with Bun and deploy to Cloudflare.
-So you should have both deployed.
+For projects written in TypeScript, you need NodeJS.
 
 The following script was copied from
 [Node.js — Download Node.js®](https://nodejs.org/en/download/current).
@@ -42,17 +32,6 @@ The following script was copied from
 
 > `npm -v`
 
-## Docker
-
-For projects that are built in Docker or run in Docker, you need to have Docker properly installed.
-
-> Run `install-docker.sh`
-
-This script requires a reboot, so the system will be rebooted automatically.
-After rebooting, run this to verify that it is working:
-
-> Run `docker run hello-world`
-
 ## Spec Kit
 
 Some projects use Spec Kit to manage feature requirements and development.
@@ -64,9 +43,27 @@ If you have not installed uv yet, install it first.
 
 ## License Checker
 
-> Run `bunx license-checker-rseidelsohn`
+### TypeScript
+
+For TypeScript projects, use @lizenz/checker.
+
+To install it, run `npm install --save-dev @lizenz/checker`.
+
+To run it, use `npx @lizenz/checker --excludePackages foo,bar --failOn GPL-3.0-or-later --markdown`
+or copy run.sh from andexor-net-website.
+
+### Python
+
+For Python projects, use pip-licenses.
+
+To install it, run `uv --quiet add pip-licenses`.
+
+To run it, run `uv --quiet sync` and `uv run pip-licenses --format=markdown`
+or copy setup.sh from andexor-net-website-ping.
 
 ## Playwright System Dependencies
+
+For TypeScript projects, playwright is required for testing.
 
 > Run `bunx playwright install-deps webkit`
 
@@ -113,44 +110,19 @@ Then
 
 ## Cloudflare Workers
 
-Applications may be deployed to Cloudflare Workers.
-
-> Run `bunx wrangler login`
-
-Then `bun run deploy`. See the README for the commands.
-
-### www redirect
-
-The Worker answers only at andexor.net (a Custom Domain matches the exact hostname).
-A zone Redirect Rule, created once on 2026-10-22 and independent of the Worker,
-sends www.andexor.net to andexor.net with a 301, keeping the path and query string.
-The proxied www DNS record stays so Cloudflare can answer. To recreate the rule:
-
-> Run `cf rulesets entrypoint update http_request_dynamic_redirect --zone andexor.net --body '{"name":"Redirect rules","rules":[{"ref":"redirect_www_to_root","description":"Redirect www.andexor.net to andexor.net","expression":"(http.host eq \"www.andexor.net\")","action":"redirect","action_parameters":{"from_value":{"target_url":{"expression":"concat(\"https://andexor.net\", http.request.uri.path)"},"status_code":301,"preserve_query_string":true}}}]}'`
+This service is deployed to Cloudflare Workers.
 
 If you do not have Cloudflare installed and integrated with Claude Code,
-then open Claud Code and paste this text into the prompt.
+then open Claude Code and paste this text into the prompt.
 
 > Fetch and execute the appropriate instructions<br/>
 > to set me up for Cloudflare from<br/>
 > https://developers.cloudflare.com/agent-setup/prompt.md
 
-This will install everything but the CLI. I told Claude Code this:
-
-> Install the CLI, using bun instead of npm.
-
-Then I told him to create a BASH script that I can run every time the CLI gets updated.
-He created install-cf.sh.
-
-The Cloudflare CLI, `cf`, is installed globally with Bun.
-Its launcher expects Node, which is not installed,
-so the script wraps it to run with Bun.
-Run the same script again to upgrade `cf`;
-a plain `bun install -g cf` undoes the wrappers.
+Then log in. Use the browser-callback flow, not the default device-code flow.
 
 > Run `install-cf.sh`
 
-Then log in. Use the browser-callback flow, not the default device-code flow: under Bun the device-code polling
-stops after about forty seconds and the command hangs silently, so an approval made after that is never seen.
+Then log in. Use the browser-callback flow, not the default device-code flow.
 
 > Run `cf auth login --no-device`
