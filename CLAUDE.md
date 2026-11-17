@@ -31,4 +31,4 @@ The conventions in `andexor-glimpse-main/CLAUDE.md` apply here unchanged: naming
 
 ## Open items
 
-Master PRD section 12, Q1 to Q8, and discovery items R1 to R3.
+Master PRD section 12: open questions Q1 to Q8 and discovery items R1, R2, R3, and R8.
