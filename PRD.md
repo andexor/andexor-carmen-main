@@ -6,7 +6,7 @@ Author: Ed Jenkins <ed@andexor.net>
 
 # Andexor Carmen: Master PRD
 
-Version 0.1 (DRAFT) · 2026-11-15 · Author: Ed Jenkins (ed@andexor.net) · Source of truth for the Andexor Carmen family of repositories
+Version 1.0 (FINAL) · 2026-11-18 · Author: Ed Jenkins (ed@andexor.net) · This is the initial Source of truth for the Andexor Carmen family of repositories, only used to seed initial requirements into Spec Kit.
 
 Andexor Carmen is the Customer Relationship Management (CRM) system for Andexor Network. It follows a company from the first scrap of lead information, through research, qualification, and scoring, into meetings and deals, and on through signed agreements and the ongoing customer relationship.
 
@@ -45,7 +45,11 @@ Names follow the standing Andexor convention (`andexor-<system>-<tier>`, governi
 
 | Resource | Production | Preview |
 | --- | --- | --- |
-| Hostname | `carmen.andexor.net` | `preview-andexor-carmen-ui.andexor.workers.dev`, `preview-andexor-carmen-api.andexor.workers.dev` |
+| Hostname | `carmen.andexor.net` | `carmen-preview.andexor.net` |
+| UI Worker | `andexor-carmen-ui` | `andexor-carmen-ui-preview` |
+| API Worker | `andexor-carmen-api` | `andexor-carmen-api-preview` |
+| Route to the API | `carmen.andexor.net/api/*` | `carmen-preview.andexor.net/api/*` |
+| Route to the UI | `carmen.andexor.net/*` | `carmen-preview.andexor.net/*` |
 | D1 database | `andexor-carmen-api-prod` | `andexor-carmen-api-prev` |
 | R2 bucket (documents) | `andexor-carmen-api-prod` | `andexor-carmen-api-prev` |
 
@@ -83,7 +87,7 @@ These follow `andexor-net-website`, `andexor-net-website-contact-us`, `andexor-n
 | Database | One Cloudflare D1 database, owned by `andexor-carmen-api`. Separate preview and production databases | One database, one Worker |
 | Documents | Cloudflare R2, private bucket, reached only through the API | Signed agreements are stored in Carmen (decision 2026-11-14) |
 | Authentication | Cloudflare Access in front of `carmen.andexor.net`; the API also verifies the Access JSON Web Token (JWT) on every request | No passwords stored; defense in depth |
-| Routing | Two Workers Routes on one hostname: `carmen.andexor.net/api/*` to the API, `carmen.andexor.net/*` to the UI. Not Workers Custom Domains | Standing convention; the existing `*.andexor.net` certificate covers the hostname |
+| Routing | Two Workers Routes per hostname: `carmen.andexor.net/api/*` to the API and `carmen.andexor.net/*` to the UI in production, and the same two routes on `carmen-preview.andexor.net` for the preview. Not Workers Custom Domains. Nothing is served from `workers.dev` | Standing convention; the existing `*.andexor.net` certificate covers both hostnames |
 | API versioning | Every path starts `/api/v1/` | Same as the ping service |
 | Finite values | UPPERCASE codes in the System Reference Table (SRT), enforced by triggers | Standing convention; a new stage or type is a migration, not a code change |
 | Identifiers | Lowercase Universally Unique Identifiers (UUIDs) | Standing convention |
@@ -137,18 +141,18 @@ Carmen records what was agreed. It does not calculate invoices or track payments
 
 ## 6. Users, security, and access
 
-- **Version 1 has one user: Ed.** Cloudflare Access protects `carmen.andexor.net` (the UI at `/` and the API at `/api/*` share one Access application), with an allow-list of email addresses.
+- **Version 1 has one user: Ed.** Cloudflare Access protects `carmen.andexor.net` (the UI at `/` and the API at `/api/*` share one Access application), with an allow-list of email addresses. `carmen-preview.andexor.net` has its own Access application, covering `/` and `/api/*` the same way.
 - **Ready for a team.** The `app_user` table and an `owner_id` on companies, deals, agreements, and tasks exist from the first migration. The API creates the `app_user` row for an allowed email on first sign-in. Roles (`ADMIN`, `MEMBER`, `READER`) are defined but, in version 1, every signed-in user is treated as `ADMIN`. Adding people later is an Access policy change plus role enforcement, with no data migration.
-- **The API trusts nothing.** It verifies the Access JWT (signature, audience, expiry) on every request and takes the user's email from it. A request without a valid token gets 401, including on preview URLs.
+- **The API trusts nothing.** It verifies the Access JWT (signature, audience, expiry) on every request and takes the user's email from it. A request without a valid token gets 401, including on `carmen-preview.andexor.net`.
 - **Machine callers.** Other Workers use Service Bindings. Anything that is not a Worker uses a Cloudflare Access service token. Neither path is reachable anonymously (section 9).
 - **Documents.** The R2 bucket is private. Files are streamed through the API to a signed-in user; there are no public or pre-signed links.
 - **Personal data.** Carmen holds business contact details for people at companies. It holds no payment card data and no passwords. Deleting a company deletes its contacts, facts, answers, runs, activities, and tasks. A company with agreements or documents cannot be deleted, only archived.
 - **Secrets.** `carmen-claude-api-key`, `carmen-typesafe-api-key`, and any email provider key live in Cloudflare Secrets Store and are bound only to the API Worker.
-- **DNS.** One hand-made record: proxied `AAAA carmen` with content `100::`.
+- **DNS.** Two hand-made records: proxied `AAAA carmen` and proxied `AAAA carmen-preview`, each with content `100::`.
 
 ## 7. Data model
 
-The common data model is the Data Definition Language (DDL) in [`db/carmen/0001_init.sql`](../db/carmen/0001_init.sql), explained in [`db/README.md`](../db/README.md). Both apps follow it: the API implements it, and the UI uses the same names for the same things. The table below is a summary; the DDL governs.
+The common data model is the Data Definition Language (DDL) in [`db/carmen/0001_init.sql`](db/carmen/0001_init.sql), explained in [`db/README.md`](db/README.md). Both apps follow it: the API implements it, and the UI uses the same names for the same things. The table below is a summary; the DDL governs.
 
 | Table | Holds | Required to create a row |
 | --- | --- | --- |
@@ -157,14 +161,14 @@ The common data model is the Data Definition Language (DDL) in [`db/carmen/0001_
 | `service` | The service catalog, each with an "offered" switch | A name |
 | `enrichment_fact` | Enriched lead data as key and value, with source and date | Company, key, value |
 | `rubric_criterion` | The rubric: Fit criteria, and Need criteria per service | Section, prompt |
-| `rubric_answer` | The answers in effect for a company | Company, criterion, value |
+| `rubric_answer` | The answers in effect for a company | Company, criterion, value (points are computed in code) |
 | `company_service` | Need score per company per service | Computed |
 | `ai_model` | The models offered for research and for scoring | Provider, model id, label |
 | `ai_run` | One research run or one scoring run | Company, kind, model |
 | `ai_run_fact`, `ai_run_answer`, `ai_run_service` | What a run proposed or answered, and the scores it produced | Written by the run |
-| `deal`, `deal_service` | Potential sales and the services they cover | Company |
+| `deal`, `deal_service` | Potential sales and the services they cover | Company (the API fills in the name) |
 | `agreement`, `agreement_service` | MSAs, SOWs, and other agreements | Company, type |
-| `document` | Metadata for files in R2 | A file |
+| `document` | Metadata for files in R2 | A company and a file (the API fills in the name, type, size, checksum, and storage key) |
 | `activity` | The timeline: notes, calls, meetings, emails, automatic entries | Company |
 | `task` | Next steps with optional due dates | A title |
 | `import_batch` | One row per CSV upload | Written by the import |
@@ -173,7 +177,7 @@ The common data model is the Data Definition Language (DDL) in [`db/carmen/0001_
 | `app_user` | People who can sign in | Created on first sign-in |
 | `srt`, `schema_migration` | Reference codes; applied migrations | Seeded |
 
-**The fewest-required-fields rule.** No table may require a field beyond those in the right-hand column without an amendment to this PRD. Defaults fill the rest: stage `LEAD`, source `MANUAL`, deal stage `QUALIFYING`, deal name "<company> deal", agreement status `DRAFT`, activity kind `NOTE`, task status `OPEN`.
+**The fewest-required-fields rule.** The right-hand column lists what a person or another system must supply. No table may require a field beyond those, other than values the system generates or computes itself (identifiers, timestamps, and the items noted in the column). Adding a required field needs a Spec Kit specification that says why. Defaults fill the rest: stage `LEAD`, source `MANUAL`, deal stage `QUALIFYING`, deal name "<company> deal", agreement status `DRAFT`, activity kind `NOTE`, task status `OPEN`.
 
 **Duplicates.** A company's `domain` is derived from its website (lowercase, no scheme, no `www.`, no path). Two unarchived companies cannot share a domain. Every intake path matches on domain first and adds to the existing company instead of creating a second one.
 
@@ -252,20 +256,20 @@ Both are idempotent on `(source, source_ref)`.
 
 ## 10. Environments and CI/CD
 
-Both app repos use the pipeline recorded in `andexor-net-website-ping/CICD.md`:
+Both app repos use a gated CI/CD pipeline like this:
 
 ```
 Pull request   -> deploy to the preview Worker -> smoke test -> required check
 Merge to main  -> deploy to the preview Worker -> smoke test -> deploy to production -> health check
 ```
 
-- One shared preview per Worker, named `preview`; runs take turns.
+- One shared preview environment at `carmen-preview.andexor.net`, served by the Workers `andexor-carmen-ui-preview` and `andexor-carmen-api-preview` through Workers Routes; runs take turns. The `workers.dev` subdomain and `workers.dev` preview URLs are turned off for every Carmen Worker.
 - Preview and production never share a database or a bucket. The smoke test's writes never run against production.
 - The required status check `Preview and smoke test` and the default-branch ruleset are as in the ping service.
 - Workers Builds stays disconnected; only GitHub Actions deploys.
 - Each repo has its own Cloudflare API token.
 - Create and teardown scripts for the preview environment are committed. Production has no teardown script.
-- **Preview is gated too.** Unlike the ping service, Carmen's preview must not be public, because a CRM's preview is one mistake away from real data. Cloudflare Access is turned on for the preview URLs, and CI signs in with an Access service token held in GitHub secrets (R3).
+- **Preview is gated too.** Unlike the ping service, Carmen's preview must not be public, because a CRM's preview is one mistake away from real data. Cloudflare Access is turned on for `carmen-preview.andexor.net`, and CI signs in with an Access service token held in GitHub secrets (R3).
 - **Migrations.** The API's deploy workflow applies numbered migrations from `andexor-carmen-main/db/carmen/` to the preview database before the smoke test and to production before the production deploy. Runtime code never issues DDL.
 
 ## 11. User experience requirements
@@ -287,7 +291,7 @@ These bind the UI PRD.
 | --- | --- | --- | --- |
 | R1 | FastAPI on Python Workers: package support and cold start | Third-party Software Development Kits (SDKs) may not load on the Pyodide runtime | Call the Claude and TypeSafe APIs with plain HTTP requests, not SDKs; measure cold start in discovery |
 | R2 | An AI run outlasts one request | Research with web search can take a minute or more | Return 202 with a run id; do the work with `waitUntil` or a Cloudflare Queue; the UI polls. Discovery task in the API PRD |
-| R3 | Cloudflare Access on workers.dev preview URLs | The preview gate depends on it | Verify in discovery; fall back to the API rejecting any request without a valid Access JWT or service token, which it does anyway |
+| R3 | Cloudflare Access on `carmen-preview.andexor.net`, with a service token from GitHub Actions | The preview gate depends on it | Verify in discovery; fall back to the API rejecting any request without a valid Access JWT or service token, which it does anyway |
 | R4 | D1 limits | 10 GB per database and per-query limits | Far above CRM volume; documents live in R2, not D1 |
 | R5 | AI answers can be wrong | A wrong answer can send Ed after a bad lead or away from a good one | Nothing is applied without Ed's action; every answer shows its source; comparison and ratings exist to learn which models to trust |
 | R6 | AI cost | Web search research is paid per use | Tokens recorded per run; the comparison view shows cost drivers per model; no automatic or bulk runs in version 1 |
@@ -327,7 +331,7 @@ Implementation order: `andexor-carmen-main` (this PRD, data model, constitution)
 - [x] UI: Today view first, always dark, phone matters
 - [x] Engagement models: one-time, retainer, performance-based, pay as you go
 - [x] Common data model drafted and passing `tools/check_schemas.py`
-- [ ] Ed reviews this PRD and the two child PRDs
+- [X] Ed reviews this PRD and the two child PRDs
 - [ ] Q1, Q3, Q4, Q5, Q6, Q8 answered (Q2 and Q7 closed)
 - [ ] API contract (`api/carmen-api.openapi.yaml`) drafted from the API PRD
 - [ ] Repos created in the `andexor` organization and pushed

@@ -40,8 +40,8 @@ INSERT INTO srt (domain, code, label, description, sort_order) VALUES
   ('USER_ROLE', 'READER', 'Reader', 'Read-only', 3),
 
   ('COMPANY_STAGE', 'LEAD', 'Lead', 'Known company, not yet contacted or not yet engaged', 1),
-  ('COMPANY_STAGE', 'PROSPECT', 'Prospect', 'In conversation; at least one open deal or meeting', 2),
-  ('COMPANY_STAGE', 'CUSTOMER', 'Customer', 'Has at least one signed or active agreement', 3),
+  ('COMPANY_STAGE', 'PROSPECT', 'Prospect', 'In conversation; the first deal was created, or set by hand', 2),
+  ('COMPANY_STAGE', 'CUSTOMER', 'Customer', 'Has an agreement in effect; the first one became ACTIVE', 3),
   ('COMPANY_STAGE', 'FORMER', 'Former customer', 'Was a customer; no active agreement', 4),
   ('COMPANY_STAGE', 'DISQUALIFIED', 'Disqualified', 'Not worth pursuing; reason recorded', 5),
 
