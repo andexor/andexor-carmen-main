@@ -8,6 +8,5 @@
 /playwright-report/
 /test-results/
 /stubs/
-bun.lock
 tsconfig.tsbuildinfo
 *.md

@@ -54,8 +54,6 @@ Other Linux distributions and other operating systems may have compatibility iss
 
 Whenever possible, the Alpine Linux distribution should also be supported, but only if it requires very little effort.
 
-In Docker images the "scratch" base image should also be used whenever possible.
-
 macOS can be used for some development, but is generally discouraged because the versions of dependencies will not always match those in Linux.
 
 Mobile apps may be built for iOS, iPadOS, watchOS, visionOS, tvOS, or Android as needed.

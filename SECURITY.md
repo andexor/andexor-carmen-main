@@ -66,12 +66,11 @@ The following categories **are** considered security vulnerabilities when they a
 
 - **Content injection or cross-site scripting (XSS)**: any way for a page to run script or render markup that the
   Markdown source or the components did not intend
-- **Path traversal or information disclosure in `server.ts`**: serving a file outside `out/`, or exposing the
-  container's file system or environment
-- **Supply chain**: a build script, dependency override, or Dockerfile step that could fetch or run code from an
+- **Path traversal or information disclosure in `server.ts` for front-end apps**: serving a file outside `out/`
+- **Supply chain**: a build script or dependency override that could fetch or run code from an
   untrusted source, or that bypasses the frozen lockfile
 - **Build-time code execution**: a Markdown file, front matter, or asset that causes the build to run code
-- **Denial of service in `server.ts`** from a single malformed request, such as a crash or a hang, as distinct from
+- **Denial of service in `server.ts` for front-end apps** from a single malformed request, such as a crash or a hang, as distinct from
   volume-based attacks, which are out of scope
 - **Secrets in the repository or the built site**: a credential, token, or private key committed by mistake
 

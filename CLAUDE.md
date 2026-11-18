@@ -4,8 +4,8 @@ This repo governs the Andexor Carmen family. It holds no runtime code. Read this
 
 ## Source of truth
 
-- **`PRD.md`** is the master Product Requirements Document (PRD). Each child repo's `PRD.md` and Spec Kit artifacts (`spec.md`, `plan.md`, `tasks.md`) refine it and may not contradict it. A conflict is resolved by amending the master first, then the child.
-- **`Spec Kit`** is where new requirements are added after the PRD is written. The PRD is for the seeding of initial requirements only and will not be maintained.
+- **`PRD.md`** is the master Product Requirements Document (PRD). Each child repo's `PRD.md` and Spec Kit artifacts (`spec.md`, `plan.md`, `tasks.md`) refine it and may not contradict it.
+- **`Spec Kit`** is where all new requirements go. The master PRD and the child PRDs are frozen once the first commit of them lands: they seed the initial requirements only and are no longer edited. A later requirement that changes something the PRD says is recorded in Spec Kit, and where they differ, the Spec Kit artifact wins.
 - **`db/`** is the common data model both apps follow: the Data Definition Language (DDL) for the one Carmen database. Schema changes are numbered migrations; see `db/README.md`.
 - **`api/`** will hold the OpenAPI 3.1 contract for `andexor-carmen-api`, drafted from the API PRD. Once code exists, FastAPI's generated specification replaces it.
 - **`.specify/memory/constitution.md`** is the Spec Kit constitution. It is copied, not rewritten, into the child repos.
@@ -14,10 +14,10 @@ This repo governs the Andexor Carmen family. It holds no runtime code. Read this
 
 The conventions in `andexor-glimpse-main/CLAUDE.md` apply here unchanged: naming, lowercase identifiers, UPPERCASE System Reference Table (SRT) codes, uppercase CSS hex colors, names spelled out on first use, one database per Worker, Secrets Store, Workers Routes (never Custom Domains), observability at full sampling, robots rules, the stack, and Spec Kit. Carmen-specific points:
 
-1. **Hostname.** `carmen.andexor.net`. `/api/*` goes to `andexor-carmen-api`; `/*` goes to `andexor-carmen-ui`. One Cloudflare Access application covers both.
+1. **Hostnames.** `carmen.andexor.net` for production and `carmen-preview.andexor.net` for preview. On each, `/api/*` goes to `andexor-carmen-api` (`andexor-carmen-api-preview` in preview) and `/*` goes to `andexor-carmen-ui` (`andexor-carmen-ui-preview` in preview). One Cloudflare Access application per hostname covers both routes. Nothing is served from `workers.dev`.
 2. **Few required fields.** Master PRD section 7 lists the only fields any table, endpoint, or form may require.
 3. **AI proposes, a person decides.** No run changes a company record. Score arithmetic is done in code.
-4. **Preview is gated.** Unlike the website services, Carmen's preview URLs sit behind Cloudflare Access.
+4. **Preview is gated.** Unlike the website services, Carmen's preview hostname (`carmen-preview.andexor.net`) sits behind Cloudflare Access.
 
 ## Working in this repo
 

@@ -7,22 +7,26 @@ This constitution is written in `andexor-carmen-main` and copied, not rewritten,
 
 ### I. The Master PRD and the Common Data Model Govern
 `andexor-carmen-main/PRD.md` is the master Product Requirements Document (PRD), and
-`andexor-carmen-main/db/` is the common data model. Each app's `PRD.md` and its Spec Kit
-artifacts refine the master and MUST NOT contradict it. A conflict MUST be resolved by amending the
-master first, then the child. Names in the data model (tables, columns, codes) MUST be used
-unchanged in the API's JSON and in the UI's code.
-Rationale: two apps that share one vocabulary cannot drift apart.
+`andexor-carmen-main/db/` is the common data model. The master PRD and each app's `PRD.md` seed the
+initial requirements and are frozen after their first commit; they MUST NOT be edited afterward. New
+requirements, and any change to what a PRD says, MUST go through Spec Kit. Where a Spec Kit artifact
+and a PRD differ, the Spec Kit artifact governs. Spec Kit artifacts MUST NOT contradict this
+constitution. Names in the data model (tables, columns, codes) MUST be used unchanged in the API's
+JSON and in the UI's code.
+Rationale: two apps that share one vocabulary cannot drift apart, and one living source of
+requirements cannot disagree with itself.
 
 ### II. Few Required Fields
 A form, an endpoint, or a table MUST NOT require a field beyond those listed as required in master
 PRD section 7. Anything else MUST be optional, MUST have a sensible default where one exists, and
-MUST be editable later. Adding a required field is an amendment to the master PRD.
+MUST be editable later. Adding a required field MUST be done through a Spec Kit specification that
+says why.
 Rationale: Carmen is only useful if capturing a lead takes seconds.
 
 ### III. Simplicity
 A feature MUST start in a specification. Nothing is built because it might be needed. Version 1
 MUST NOT add invoicing, mailbox or calendar sync, outbound email to prospects, automation rules,
-or role enforcement unless the master PRD changes to require them.
+or role enforcement unless a Spec Kit specification requires them.
 Rationale: every extra feature is another screen to learn and another thing to break.
 
 ### IV. Nothing Reaches Production Untested
@@ -65,8 +69,9 @@ into a failing health check.
 ### IX. Repeatable Scripts
 Every setup script MUST be idempotent. Names MUST be read from configuration, not hard-coded. Every
 non-production environment a script creates MUST have a committed script that tears it down.
-Production MUST NOT have a teardown script. Setup that cannot be scripted MUST be listed in
-`MANUAL-TASKS.md`.
+Production MUST NOT have a teardown script. Whenever a manual setup step is found that a person must do on a platform
+such as Cloudflare or GitHub, it MUST be listed and tracked in `MANUAL-TASKS.md`. The file is created
+when the first such step is found; a repo with no manual steps needs no such file.
 Rationale: environments that can be rebuilt and removed by script are safe to change.
 
 ### X. One Look (UI)
@@ -91,22 +96,22 @@ Rationale: Carmen and andexor.net should be recognizable as siblings at first si
 - API: Python managed with `uv`; local runs and deploys with `pywrangler` through `uv run`;
   Cloudflare resources outside the Worker managed with the `cf` CLI.
 - UI: Node.js and npm; Next.js static export; Prettier with 4 spaces; Vitest and Playwright.
-- No Bun and no Docker unless a reason is recorded in the master PRD.
+- No Bun and no Docker unless a reason is recorded in a Spec Kit specification.
 
 ## Delivery Workflow
 
 - Work follows Spec Kit: constitution, specification, plan, tasks, implement.
 - Changes reach `main` only through a pull request that passes the required check
   `Preview and smoke test`.
-- Each repo's `CICD.md` records its pipeline, adapted from `andexor-net-website-ping/CICD.md`.
 
 ## Governance
 
 This constitution supersedes other practices in the three Carmen repos. Amendments MUST be made in
-`andexor-carmen-main` through a pull request that states the reason and updates the version, then
-copied to the child repos in the same week. Versioning follows semantic versioning: MAJOR for
+`andexor-carmen-main` through a pull request that states the reason and updates the version. Work proceeds on one repo
+at a time: the child repos are not a concern until work begins in them, and each then receives the
+current constitution, copied unchanged. Versioning follows semantic versioning: MAJOR for
 removing or redefining a principle, MINOR for adding a principle or materially expanding guidance,
 PATCH for wording fixes. Reviewers MUST check each pull request against these principles, and any
 deviation MUST be justified in the pull request.
 
-**Version**: 1.0.0 | **Ratified**: 2026-11-15 | **Last Amended**: 2026-11-15
+**Version**: 2.0.0 | **Ratified**: 2026-11-15 | **Last Amended**: 2026-11-17

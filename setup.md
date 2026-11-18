@@ -65,14 +65,14 @@ or copy setup.sh from andexor-net-website-ping.
 
 For TypeScript projects, playwright is required for testing.
 
-> Run `bunx playwright install-deps webkit`
+> Run `npx playwright install-deps webkit`
 
 Here are some additional optional dependencies
 you can install if you want, but Firefox is low priority,
 so it is not included by default.
 
-> Run `bunx playwright install firefox`<br/>
-> Run `bunx playwright install-deps firefox`
+> Run `npx playwright install firefox`<br/>
+> Run `npx playwright install-deps firefox`
 
 Likewise, if you want to run tests for iPhone and iPad,
 you can install these optional dependencies.
@@ -81,8 +81,8 @@ so they are not included by default at this time.
 In the mean time, I use the device browser
 in Chrome Dev Tools.
 
-> Run `bunx playwright install webkit`<br/>
-> Run `bunx playwright install-deps webkit`
+> Run `npx playwright install webkit`<br/>
+> Run `npx playwright install-deps webkit`
 
 ## FontAwesome
 
@@ -94,7 +94,7 @@ subscription held by Andexor Network, Inc.
 
 - Purchased: 08/25/2026.
 - Expires, or must be renewed: 08/25/2027. Renew before that date and update the expiration date here. After it lapses, a new install of the Pro icons fails, and so does the build.
-- The license file is `.npmrc`. It is excluded from GitHub by `.gitignore`. `build.sh` passes it to the Docker builder stage as a BuildKit secret, so it is not stored in the image.
+- The license file is `.npmrc`. It is excluded from GitHub by `.gitignore`.
 
 ## Higgsfield
 
