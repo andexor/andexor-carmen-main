@@ -334,5 +334,5 @@ Implementation order: `andexor-carmen-main` (this PRD, data model, constitution)
 - [X] Ed reviews this PRD and the two child PRDs
 - [ ] Q1, Q3, Q4, Q5, Q6, Q8 answered (Q2 and Q7 closed)
 - [ ] API contract (`api/carmen-api.openapi.yaml`) drafted from the API PRD
-- [ ] Repos created in the `andexor` organization and pushed
+- [X] Repos created in the `andexor` organization and pushed
 - [ ] Discovery: R1, R2, R3

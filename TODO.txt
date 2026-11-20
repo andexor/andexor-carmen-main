@@ -94,3 +94,7 @@ This must be a non-unique index because:
 22. Andexor Grass Spider (AGS) will have RDAP and DNS info. Do we really need that in the CRM in enrichment_fact too? As a matter of fact, this applies to most, but not all, fields in this table.
 
 23. Whenever you begin scaffolding a Next.js or FastAPI app, set the initial app version to "1.0.0".
+
+24. Add a new LEAD_SOURCE. ('LEAD_SOURCE', 'SBE-2026-ATLANTA', 'SBE 2026 Atlanta', 'Small Business Expo 2026 Atlanta', 7),
+
+| Q4 | Contact Us change | Sending form submissions to Carmen needs a Service Binding and a call in `andexor-net-website-contact-us` | A spec in that repo once `create_lead` exists |
