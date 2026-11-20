@@ -331,6 +331,7 @@ CREATE TABLE ai_run (
     recommendation TEXT,
     input_tokens   INTEGER,
     output_tokens  INTEGER,
+    search_count   INTEGER CHECK (search_count >= 0),  -- web searches the run made (billed per search); NULL when the model has no web search
     duration_ms    INTEGER,
     user_rating    INTEGER CHECK (user_rating BETWEEN 1 AND 5),  -- how good was this run
     user_note      TEXT,
@@ -416,7 +417,7 @@ CREATE TABLE ai_run_answer (
     criterion_id TEXT NOT NULL REFERENCES rubric_criterion(id),
     value        TEXT NOT NULL,
     points       REAL NOT NULL CHECK (points BETWEEN 0 AND 1),
-    probability  REAL CHECK (probability BETWEEN 0 AND 1),  -- the model's own confidence, when it reports one
+    probability  REAL CHECK (probability BETWEEN 0 AND 1),  -- the model's probability that this answer is correct, when it reports one
     rationale    TEXT,                                      -- NULL for models that cannot write text
     PRIMARY KEY (ai_run_id, criterion_id)
 );
