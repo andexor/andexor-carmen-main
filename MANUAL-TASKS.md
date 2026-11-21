@@ -24,8 +24,13 @@ Online DNS scanners that look only at `carmen.andexor.net` report no SPF, DKIM, 
 ## Cloudflare
 
 - [X] DNS: proxied `AAAA carmen` and proxied `AAAA carmen-preview`, each with content `100::`.
-- [ ] Cloudflare Access: one application for `carmen.andexor.net` and one for `carmen-preview.andexor.net`, each covering `/` and `/api/*`, with an allow-list of email addresses.
-- [ ] Cloudflare Access service token for CI, so the smoke test can sign in to the preview.
+- [x] Zero Trust organization created (on or before 2026-11-17, the date of its first service token): team name `andexor`, team domain `andexor.cloudflareaccess.com`. Identity providers: Cloudflare and One-time PIN. Specified in `specs/002-cloudflare-access/spec.md` (issue #8).
+- [x] (2026-11-21) Cloudflare Access: one application for `carmen.andexor.net` and one for `carmen-preview.andexor.net`, each with the hostname only and no path (this covers `/` and `/api/*`), with an allow-list of email addresses.
+- [x] (2026-11-21) Application Audience (AUD) tag of each Access application (Zero Trust, Access controls, Applications, Edit, Additional settings). The api repo needs them with the team domain `andexor.cloudflareaccess.com`. They are identifiers, not secrets, and they change only if an application is deleted and recreated.
+  - Production (`Carmen`): `17fc8e216219c7456af6fce2bb529e0c99df04b37eb244317d5ac662c2aa451c`
+  - Preview (`Carmen preview`): `8154464c2b9aa058e7457872b661ce7b80996e8437f1b7e3fe678ab5068c0429`
+- [x] (2026-11-21) Cloudflare Access service token `andexor-carmen-api` for CI, with a Service Auth policy on the preview application only, so the smoke test can sign in to the preview. Tested: production refuses it (403), and preview lets it through (522 until the Worker is deployed). Duration one year (8760h); it expires 2027-11-17. Cloudflare renews it in place (same Client ID and Secret), so GitHub secrets do not change on renewal.
+- [x] (2026-11-21) Notifications: add an "Expiring Access Service Token" alert (dash.cloudflare.com, Notifications, Add), so Cloudflare emails a week before `andexor-carmen-api` expires.
 - [ ] Cloudflare Account API token for each repo, added to that repo's GitHub Actions and Dependabot secrets.
 - [ ] Secrets Store: `carmen-claude-api-key` (Claude Console key).
 - [ ] Secrets Store: `carmen-typesafe-api-key` (the TypeSafe Console key; a copy in GitHub secrets is not visible to the Worker). Then enable the Jev model in Settings.
