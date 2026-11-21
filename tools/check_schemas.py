@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Andexor Network, Inc.
 # Author: Ed Jenkins <ed@andexor.net>
-"""Load db/carmen/0001_init.sql into an in-memory SQLite database and run
+"""Load db/carmen/0001_init.sql and 0002_schema_review_fixes.sql into an in-memory SQLite database and run
 constraint smoke tests. Exit non-zero on any failure. Run from the repo root."""
 import pathlib
 import sqlite3
@@ -33,6 +33,7 @@ def check(label, ok):
 c = sqlite3.connect(":memory:")
 c.execute("PRAGMA foreign_keys=ON")
 c.executescript((ROOT / "db" / "carmen" / "0001_init.sql").read_text())
+c.executescript((ROOT / "db" / "carmen" / "0002_schema_review_fixes.sql").read_text())
 tables = c.execute("select count(*) from sqlite_master where type='table'").fetchone()[0]
 trig = c.execute("select count(*) from sqlite_master where type='trigger'").fetchone()[0]
 print(f"carmen: loaded, {tables} tables, {trig} triggers")
@@ -112,6 +113,21 @@ expect(c, "INSERT INTO task(id,title) VALUES('t1','Call back')", False, "task wi
 expect(c, "UPDATE task SET status='DONE' WHERE id='t1'", True, "DONE without completed_at rejected")
 expect(c, "INSERT INTO document(id,company_id,agreement_id,file_name,content_type,size_bytes,sha256,r2_key) VALUES('doc1','c1','a1','msa.pdf','application/pdf',10,'ab','c1/doc1')", False, "document accepted")
 expect(c, "INSERT INTO activity(id,company_id,kind) VALUES('act1','c1','TWEET')", True, "unknown activity kind rejected (SRT)")
+
+# Migration 0002 (issue #12).
+expect(c, "INSERT INTO company(id,name,stage) VALUES('rt1','Retired Co','LEAD')", False, "company holding a soon-retired stage accepted")
+expect(c, "UPDATE srt SET active=0 WHERE domain='COMPANY_STAGE' AND code='LEAD'", False, "LEAD retired")
+expect(c, "UPDATE company SET phone='5550000000', stage='LEAD' WHERE id='rt1'", False, "unchanged retired code does not block an update")
+expect(c, "INSERT INTO company(id,name,stage) VALUES('rt2','New Co','LEAD')", True, "retired code rejected on insert")
+expect(c, "UPDATE company SET stage='LEAD' WHERE id='c1'", True, "retired code rejected when a row changes to it")
+expect(c, "UPDATE srt SET active=1 WHERE domain='COMPANY_STAGE' AND code='LEAD'", False, "LEAD restored")
+expect(c, "UPDATE deal SET stage='NEGOTIATION' WHERE id='dt1'", False, "closed deal reopened")
+check("reopening clears closed_at and total_deal_time", c.execute("SELECT closed_at IS NULL AND total_deal_time IS NULL FROM deal WHERE id='dt1'").fetchone()[0] == 1)
+expect(c, "UPDATE ai_run SET finished_at=NULL WHERE id='run-d1'", False, "run finish time cleared")
+check("clearing finished_at clears duration_ms", c.execute("SELECT duration_ms IS NULL FROM ai_run WHERE id='run-d1'").fetchone()[0] == 1)
+names = {r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='index'")}
+check("the four foreign key indexes exist", {"activity_contact_idx", "activity_deal_idx", "enrichment_ai_run_idx", "rubric_answer_run_idx"} <= names)
+check("schema_migration records versions 1 and 2", [r[0] for r in c.execute("SELECT version FROM schema_migration ORDER BY version")] == [1, 2])
 
 # Every SRT column listed in build_schema.sh must carry a "-- SRT domain: X" comment in the base file, and no other column may.
 import re
