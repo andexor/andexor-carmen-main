@@ -19,7 +19,9 @@ Both apps follow this model. The API implements it. The UI uses the same names f
 | File | What it is |
 | --- | --- |
 | `carmen/0001_init.base.sql` | The hand-written tables, indexes, and seed rows. Edit this one. |
-| `carmen/0001_init.sql` | The base file plus generated SRT triggers. Built by `tools/build_schema.sh`. Never edit by hand. |
+| `carmen/0001_init.sql` | The base file plus generated SRT triggers. Built by `tools/build_schema.sh`. Never edit by hand. Applied to both databases on 2026-11-21, so it is frozen. |
+| `carmen/0002_schema_review_fixes.base.sql` | Migration 0002, hand-written: reopen and rerun triggers, four foreign key indexes. Edit this one until it is applied. |
+| `carmen/0002_schema_review_fixes.sql` | The base file plus the generated SRT update triggers. Built by `tools/build_schema.sh`. Never edit by hand. |
 
 After any change: `./tools/build_schema.sh && python3 tools/check_schemas.py`.
 
@@ -37,7 +39,7 @@ After any change: `./tools/build_schema.sh && python3 tools/check_schemas.py`.
 
 ## System Reference Table (SRT)
 
-The `srt` table, `(domain, code, label, description, sort_order, active)`, is the authoritative list of every finite-value code. Codes are UPPERCASE. Each column that holds a code has a pair of generated triggers that reject any value not present and active in `srt`, and a `-- SRT domain: X` comment on its column definition naming the domain (SQLite has no column comment syntax, so a SQL comment is the only form; `check_schemas.py` verifies the comments match the list in `tools/build_schema.sh`). Adding or retiring a value is a migration that touches `srt`, never a code edit. The UI reads labels and order from `srt` through the API.
+The `srt` table, `(domain, code, label, description, sort_order, active)`, is the authoritative list of every finite-value code. Codes are UPPERCASE. Each column that holds a code has a pair of generated triggers that reject any value not present and active in `srt` (the update trigger checks only when the column's value changes, so a row that holds a retired code can still be edited), and a `-- SRT domain: X` comment on its column definition naming the domain (SQLite has no column comment syntax, so a SQL comment is the only form; `check_schemas.py` verifies the comments match the list in `tools/build_schema.sh`). Adding or retiring a value is a migration that touches `srt`, never a code edit. The UI reads labels and order from `srt` through the API.
 
 | Domain | Codes |
 | --- | --- |
