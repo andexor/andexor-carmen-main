@@ -35,9 +35,9 @@ CREATE TABLE srt (
 CREATE INDEX srt_domain_idx ON srt(domain, sort_order);
 
 INSERT INTO srt (domain, code, label, description, sort_order) VALUES
-  ('USER_ROLE', 'ADMIN', 'Admin', 'Full access, including settings and users', 1),
+  ('USER_ROLE', 'READER', 'Reader', 'Read-only', 1),
   ('USER_ROLE', 'MEMBER', 'Member', 'Works leads, deals, and customers', 2),
-  ('USER_ROLE', 'READER', 'Reader', 'Read-only', 3),
+  ('USER_ROLE', 'ADMIN', 'Admin', 'Full access, including settings and users', 3),
 
   ('COMPANY_STAGE', 'LEAD', 'Lead', 'Known company, not yet contacted or not yet engaged', 1),
   ('COMPANY_STAGE', 'PROSPECT', 'Prospect', 'In conversation; the first deal was created, or set by hand', 2),
@@ -51,9 +51,11 @@ INSERT INTO srt (domain, code, label, description, sort_order) VALUES
   ('LEAD_SOURCE', 'GRASS_SPIDER', 'Grass Spider', 'Discovered by Andexor Grass Spider', 4),
   ('LEAD_SOURCE', 'REFERRAL', 'Referral', 'Referred by a person or a customer', 5),
   ('LEAD_SOURCE', 'OTHER', 'Other', 'Anything else', 6),
+  ('LEAD_SOURCE', 'SBE-2026-ATLANTA', 'SBE 2026 Atlanta', 'Small Business Expo 2026 Atlanta', 7),
 
-  ('MEETING_MODE', 'IN_PERSON', 'In person', 'Meets in person', 1),
-  ('MEETING_MODE', 'ONLINE', 'Online', 'Meets online only', 2),
+  ('MEETING_MODE', 'ONLINE', 'Online', 'Meets online only', 1),
+  ('MEETING_MODE', 'IN_PERSON', 'In person', 'Meets in person', 2),
+  ('MEETING_MODE', 'BOTH', 'Both', 'Meets online and in person', 3),
 
   ('RECOMMENDATION', 'REACH_OUT', 'Reach out', 'Fit and Need are both high enough', 1),
   ('RECOMMENDATION', 'MAYBE', 'Maybe', 'One score is high, or confidence is low', 2),
@@ -74,6 +76,13 @@ INSERT INTO srt (domain, code, label, description, sort_order) VALUES
   ('ENRICHMENT_SOURCE', 'CONTACT_US', 'Contact Us form', 'Carried in with a form submission', 4),
   ('ENRICHMENT_SOURCE', 'CSV', 'CSV import', 'Extra columns from an import', 5),
   ('ENRICHMENT_SOURCE', 'API', 'API', 'Posted by another tool', 6),
+
+  ('ENRICHMENT_VALUE_TYPE', 'YES_NO', 'Yes or no', 'YES or NO; the UI shows a toggle', 1),
+  ('ENRICHMENT_VALUE_TYPE', 'NUMBER', 'Number', 'A number', 2),
+  ('ENRICHMENT_VALUE_TYPE', 'RATING', 'Rating 0 to 5', 'A whole number from 0 to 5; higher is better; what each level means is a general guideline', 3),
+  ('ENRICHMENT_VALUE_TYPE', 'DATE', 'Date', 'A date as YYYY-MM-DD', 4),
+  ('ENRICHMENT_VALUE_TYPE', 'CODE', 'Code', 'One code from a short list given in the description', 5),
+  ('ENRICHMENT_VALUE_TYPE', 'TEXT', 'Text', 'Free text', 6),
 
   ('PROPOSAL_STATUS', 'PROPOSED', 'Proposed', 'Waiting for a user to accept or reject', 1),
   ('PROPOSAL_STATUS', 'ACCEPTED', 'Accepted', 'Copied into the company record', 2),
@@ -157,15 +166,24 @@ INSERT INTO srt (domain, code, label, description, sort_order) VALUES
 -- app_user: people who can sign in. Version 1 has one row (Ed). The table and
 -- the owner_id columns exist so a team can be added later without a migration.
 -- Identity comes from Cloudflare Access; email is the join key.
+-- The first row is always ADMIN. Every user added after that defaults to READER
+-- and an ADMIN raises them to MEMBER or ADMIN.
 -- ---------------------------------------------------------------------------
 CREATE TABLE app_user (
     id           TEXT PRIMARY KEY CHECK (id = lower(id)),
     email        TEXT NOT NULL UNIQUE CHECK (email = lower(email)),
     display_name TEXT,
-    role         TEXT NOT NULL DEFAULT 'ADMIN',
+    role         TEXT NOT NULL DEFAULT 'READER',  -- SRT domain: USER_ROLE
     active       INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0,1)),
     created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
 );
+
+-- The first user in an empty table becomes ADMIN, whatever role was supplied.
+CREATE TRIGGER app_user_first_admin AFTER INSERT ON app_user
+WHEN (SELECT count(*) FROM app_user) = 1
+BEGIN
+    UPDATE app_user SET role = 'ADMIN' WHERE id = NEW.id;
+END;
 
 -- ---------------------------------------------------------------------------
 -- service: the service catalog, seeded from andexor.net. offered = 0 means
@@ -174,21 +192,21 @@ CREATE TABLE app_user (
 CREATE TABLE service (
     id          TEXT PRIMARY KEY CHECK (id = lower(id)),
     name        TEXT NOT NULL UNIQUE,
-    category    TEXT,
+    category    TEXT,  -- SRT domain: SERVICE_CATEGORY
     offered     INTEGER NOT NULL DEFAULT 1 CHECK (offered IN (0,1)),
     sort_order  INTEGER NOT NULL DEFAULT 0,
     active      INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0,1))
 );
 
 INSERT INTO service (id, name, category, sort_order) VALUES
-  ('technical-seo', 'Technical SEO', 'TECHNICAL', 1),
-  ('web-development', 'Web Development', 'TECHNICAL', 2),
-  ('web-hosting', 'Web Hosting', 'TECHNICAL', 3),
+  ('web-development', 'Web Development', 'TECHNICAL', 1),
+  ('web-hosting', 'Web Hosting', 'TECHNICAL', 2),
+  ('technical-seo', 'Technical SEO', 'TECHNICAL', 3),
   ('agentic-systems', 'Agentic Systems', 'TECHNICAL', 4),
-  ('growth-marketing', 'Growth Marketing', 'BUSINESS', 5),
-  ('lead-generation', 'Lead Generation', 'BUSINESS', 6),
-  ('process-re-engineering', 'Process Re-engineering', 'BUSINESS', 7),
-  ('cost-reduction', 'Cost Reduction', 'BUSINESS', 8);
+  ('cost-reduction', 'Cost Reduction', 'BUSINESS', 5),
+  ('process-re-engineering', 'Process Re-engineering', 'BUSINESS', 6),
+  ('lead-generation', 'Lead Generation', 'BUSINESS', 7),
+  ('growth-marketing', 'Growth Marketing', 'BUSINESS', 8);
 
 -- ---------------------------------------------------------------------------
 -- import_batch: one row per CSV upload or bulk push, so a bad import can be
@@ -196,7 +214,7 @@ INSERT INTO service (id, name, category, sort_order) VALUES
 -- ---------------------------------------------------------------------------
 CREATE TABLE import_batch (
     id              TEXT PRIMARY KEY CHECK (id = lower(id)),
-    source          TEXT NOT NULL,
+    source          TEXT NOT NULL,  -- SRT domain: LEAD_SOURCE
     file_name       TEXT,
     row_count       INTEGER NOT NULL DEFAULT 0,
     created_count   INTEGER NOT NULL DEFAULT 0,
@@ -215,8 +233,8 @@ CREATE TABLE company (
     name                TEXT,
     website             TEXT,
     domain              TEXT CHECK (domain = lower(domain)),  -- derived from website; duplicate detection
-    stage               TEXT NOT NULL DEFAULT 'LEAD',
-    source              TEXT NOT NULL DEFAULT 'MANUAL',
+    stage               TEXT NOT NULL DEFAULT 'LEAD',  -- SRT domain: COMPANY_STAGE
+    source              TEXT NOT NULL DEFAULT 'MANUAL',  -- SRT domain: LEAD_SOURCE
     source_ref          TEXT,                                 -- e.g. contact_us row id, Grass Spider id
     import_batch_id     TEXT REFERENCES import_batch(id),
     phone               TEXT,
@@ -229,12 +247,12 @@ CREATE TABLE company (
     industry            TEXT,
     naics_code          TEXT,
     employee_count      INTEGER,
-    meeting_mode        TEXT,
+    meeting_mode        TEXT,  -- SRT domain: MEETING_MODE
     summary             TEXT,
     fit_score           INTEGER CHECK (fit_score BETWEEN 0 AND 100),
     need_score          INTEGER CHECK (need_score BETWEEN 0 AND 100),
     confidence          INTEGER CHECK (confidence BETWEEN 0 AND 100),
-    recommendation      TEXT,
+    recommendation      TEXT,  -- SRT domain: RECOMMENDATION
     scored_at           TEXT,
     disqualified_reason TEXT,
     owner_id            TEXT REFERENCES app_user(id),
@@ -258,7 +276,7 @@ CREATE TABLE contact (
     title       TEXT,
     email       TEXT,
     phone       TEXT,
-    role        TEXT,
+    role        TEXT,  -- SRT domain: CONTACT_ROLE
     is_primary  INTEGER NOT NULL DEFAULT 0 CHECK (is_primary IN (0,1)),
     notes       TEXT,
     created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
@@ -267,6 +285,7 @@ CREATE TABLE contact (
 );
 CREATE INDEX contact_company_idx ON contact(company_id);
 CREATE INDEX contact_email_idx ON contact(email);
+CREATE INDEX contact_phone_idx ON contact(phone);  -- not unique: one number can belong to several contacts
 CREATE UNIQUE INDEX contact_primary_uq ON contact(company_id) WHERE is_primary = 1;
 
 -- ---------------------------------------------------------------------------
@@ -277,7 +296,7 @@ CREATE UNIQUE INDEX contact_primary_uq ON contact(company_id) WHERE is_primary =
 -- ---------------------------------------------------------------------------
 CREATE TABLE ai_model (
     id           TEXT PRIMARY KEY CHECK (id = lower(id)),
-    provider     TEXT NOT NULL,
+    provider     TEXT NOT NULL,  -- SRT domain: AI_PROVIDER
     model_id     TEXT NOT NULL,              -- the provider's own model identifier
     label        TEXT NOT NULL,
     can_research INTEGER NOT NULL DEFAULT 0 CHECK (can_research IN (0,1)),
@@ -319,20 +338,21 @@ INSERT INTO ai_model (id, provider, model_id, label, can_research, can_score, we
 CREATE TABLE ai_run (
     id             TEXT PRIMARY KEY CHECK (id = lower(id)),
     company_id     TEXT NOT NULL REFERENCES company(id) ON DELETE CASCADE,
-    kind           TEXT NOT NULL,
+    kind           TEXT NOT NULL,  -- SRT domain: AI_RUN_KIND
     ai_model_id    TEXT NOT NULL REFERENCES ai_model(id),
     model_id_used  TEXT,                     -- copy of ai_model.model_id at run time
     input_run_id   TEXT REFERENCES ai_run(id) ON DELETE SET NULL,
-    status         TEXT NOT NULL DEFAULT 'QUEUED',
+    status         TEXT NOT NULL DEFAULT 'QUEUED',  -- SRT domain: RUN_STATUS
     dossier        TEXT,                     -- RESEARCH: the written findings
     fit_score      INTEGER CHECK (fit_score BETWEEN 0 AND 100),
     need_score     INTEGER CHECK (need_score BETWEEN 0 AND 100),
     confidence     INTEGER CHECK (confidence BETWEEN 0 AND 100),
-    recommendation TEXT,
+    recommendation TEXT,  -- SRT domain: RECOMMENDATION
     input_tokens   INTEGER,
     output_tokens  INTEGER,
     search_count   INTEGER CHECK (search_count >= 0),  -- web searches the run made (billed per search); NULL when the model has no web search
-    duration_ms    INTEGER,
+    duration_ms    INTEGER,  -- end to end, started_at to finished_at, in ms; set by trigger, never by code
+    model_ms       INTEGER CHECK (model_ms >= 0),  -- ms spent waiting on the model; set by code, NULL when unknown
     user_rating    INTEGER CHECK (user_rating BETWEEN 1 AND 5),  -- how good was this run
     user_note      TEXT,
     applied_at     TEXT,                     -- SCORING: when its answers became the company's answers
@@ -344,6 +364,24 @@ CREATE TABLE ai_run (
     CHECK (input_run_id IS NULL OR kind = 'SCORING')
 );
 CREATE INDEX ai_run_company_idx ON ai_run(company_id, kind, created_at);
+
+-- duration_ms is end to end: finished_at minus started_at, in milliseconds. The
+-- code writes both timestamps as UTC with milliseconds (2026-11-21T14:03:05.123Z).
+CREATE TRIGGER ai_run_duration_ins AFTER INSERT ON ai_run
+WHEN NEW.started_at IS NOT NULL AND NEW.finished_at IS NOT NULL
+BEGIN
+    UPDATE ai_run
+       SET duration_ms = CAST(ROUND((julianday(NEW.finished_at) - julianday(NEW.started_at)) * 86400000) AS INTEGER)
+     WHERE id = NEW.id;
+END;
+
+CREATE TRIGGER ai_run_duration_upd AFTER UPDATE OF started_at, finished_at ON ai_run
+WHEN NEW.started_at IS NOT NULL AND NEW.finished_at IS NOT NULL
+BEGIN
+    UPDATE ai_run
+       SET duration_ms = CAST(ROUND((julianday(NEW.finished_at) - julianday(NEW.started_at)) * 86400000) AS INTEGER)
+     WHERE id = NEW.id;
+END;
 CREATE INDEX ai_run_model_idx ON ai_run(ai_model_id, kind);
 
 -- Facts a research run proposes. Accepting one copies it into enrichment_fact.
@@ -353,22 +391,58 @@ CREATE TABLE ai_run_fact (
     key        TEXT NOT NULL CHECK (key = lower(key)),
     value      TEXT NOT NULL,
     source_url TEXT,
-    decision   TEXT NOT NULL DEFAULT 'PROPOSED'
+    notes      TEXT,  -- optional note on this fact
+    decision   TEXT NOT NULL DEFAULT 'PROPOSED'  -- SRT domain: PROPOSAL_STATUS
 );
 CREATE INDEX ai_run_fact_idx ON ai_run_fact(ai_run_id);
 
 -- ---------------------------------------------------------------------------
+-- enrichment_key: the well-known keys, for auto-complete and to tell the UI what
+-- kind of value a key holds. It is a hint list, not a constraint: enrichment_fact.key
+-- has no foreign key to it, so any tool can still post a fact with a new key. The
+-- API suggests these keys plus any key already used in enrichment_fact.
+-- ---------------------------------------------------------------------------
+CREATE TABLE enrichment_key (
+    key         TEXT PRIMARY KEY CHECK (key = lower(key)),
+    label       TEXT NOT NULL,
+    value_type  TEXT NOT NULL DEFAULT 'TEXT',  -- SRT domain: ENRICHMENT_VALUE_TYPE
+    description TEXT,
+    sort_order  INTEGER NOT NULL DEFAULT 0,
+    active      INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0,1))
+);
+
+INSERT INTO enrichment_key (key, label, value_type, description, sort_order) VALUES
+  ('location', 'Location', 'TEXT', 'City and region', 1),
+  ('employee_count', 'Employee count', 'NUMBER', 'How many people work there', 2),
+  ('in_metro_atlanta', 'In metro Atlanta', 'YES_NO', 'Answers: Is the business in metro Atlanta?', 3),
+  ('current_provider', 'Current provider', 'CODE', 'Who handles their web and marketing today: NOBODY, OWNER, FREELANCER, AGENCY, or IN_HOUSE', 4),
+  ('current_provider_name', 'Current provider name', 'TEXT', 'The name of whoever handles it, for example an agency or a freelancer; only when known', 5),
+  ('cms', 'Website platform', 'TEXT', 'For example WordPress', 6),
+  ('has_website', 'Has a website', 'YES_NO', 'Answers: Do they have a website?', 7),
+  ('website_up_to_date', 'Website is up to date', 'YES_NO', 'Answers: Does their website look up to date?', 8),
+  ('mobile_friendly', 'Mobile friendly', 'YES_NO', 'Answers: Is the site easy to use on a phone?', 9),
+  ('https', 'Uses HTTPS', 'YES_NO', 'Answers: Is the site secure?', 10),
+  ('site_reliably_up', 'Site is reliably up', 'YES_NO', 'Answers: Is the site reliably up?', 11),
+  ('core_web_vitals_mobile', 'Core Web Vitals on mobile', 'CODE', 'PASS or FAIL. Answers: Does the site pass Core Web Vitals on mobile?', 12),
+  ('pagespeed_mobile', 'PageSpeed score, mobile', 'NUMBER', '0 to 100. Answers: Is the site fast?', 13),
+  ('pagespeed_desktop', 'PageSpeed score, desktop', 'NUMBER', '0 to 100', 14),
+  ('search_visibility', 'Search visibility', 'RATING', '0 = invisible, 5 = dominant, for their main search terms. Notes can hold what the customer says and what we observe. Feeds the search visibility rating question', 15),
+  ('marketing_activity', 'Marketing activity', 'RATING', '0 = none, 5 = very active, today. Notes can hold what the customer says and what we observe. Feeds the marketing activity rating question', 16),
+  ('domain_expires', 'Domain expires', 'DATE', 'A signal for a service to add to a proposal. From Registration Data Access Protocol (RDAP). Carmen may look it up until Andexor Grass Spider provides it', 17);
+
+-- ---------------------------------------------------------------------------
 -- enrichment_fact: enriched lead data as key and value pairs, so any tool can
 -- post anything without a schema change. Each fact records where it came from.
--- Well-known keys are documented in db/README.md.
+-- Well-known keys are in the enrichment_key table.
 -- ---------------------------------------------------------------------------
 CREATE TABLE enrichment_fact (
     id            TEXT PRIMARY KEY CHECK (id = lower(id)),
     company_id    TEXT NOT NULL REFERENCES company(id) ON DELETE CASCADE,
     key           TEXT NOT NULL CHECK (key = lower(key)),
     value         TEXT NOT NULL,
-    source        TEXT NOT NULL DEFAULT 'MANUAL',
-    source_detail TEXT,                      -- URL, tool name, or note
+    source        TEXT NOT NULL DEFAULT 'MANUAL',  -- SRT domain: ENRICHMENT_SOURCE
+    source_detail TEXT,                      -- where it came from: URL or tool name
+    notes         TEXT,                      -- optional note on this fact
     ai_run_id     TEXT REFERENCES ai_run(id) ON DELETE SET NULL,
     observed_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
     created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
@@ -382,11 +456,11 @@ CREATE INDEX enrichment_company_idx ON enrichment_fact(company_id, key, observed
 -- ---------------------------------------------------------------------------
 CREATE TABLE rubric_criterion (
     id             TEXT PRIMARY KEY CHECK (id = lower(id)),
-    section        TEXT NOT NULL,
+    section        TEXT NOT NULL,  -- SRT domain: RUBRIC_SECTION
     service_id     TEXT REFERENCES service(id),
     prompt         TEXT NOT NULL,
     help           TEXT,
-    answer_type    TEXT NOT NULL DEFAULT 'YES_NO',
+    answer_type    TEXT NOT NULL DEFAULT 'YES_NO',  -- SRT domain: ANSWER_TYPE
     weight         INTEGER NOT NULL DEFAULT 1 CHECK (weight BETWEEN 1 AND 10),
     config_json    TEXT,
     enrichment_key TEXT,                     -- fact that usually answers this; hint for AI and UI
@@ -403,7 +477,7 @@ CREATE TABLE rubric_answer (
     criterion_id TEXT NOT NULL REFERENCES rubric_criterion(id),
     value        TEXT NOT NULL,               -- YES / NO, 0-5, a number, or a choice code
     points       REAL NOT NULL CHECK (points BETWEEN 0 AND 1),
-    source       TEXT NOT NULL DEFAULT 'MANUAL',
+    source       TEXT NOT NULL DEFAULT 'MANUAL',  -- SRT domain: ANSWER_SOURCE
     ai_run_id    TEXT REFERENCES ai_run(id) ON DELETE SET NULL,
     answered_by  TEXT REFERENCES app_user(id),
     answered_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
@@ -441,23 +515,30 @@ CREATE TABLE company_service (
 );
 
 INSERT INTO rubric_criterion (id, section, service_id, prompt, answer_type, weight, config_json, enrichment_key, sort_order) VALUES
-  ('00000000-0000-4000-8000-000000000101', 'FIT', NULL, 'Is the business in metro Atlanta or willing to work online?', 'YES_NO', 3, NULL, 'location', 1),
+  ('00000000-0000-4000-8000-000000000101', 'FIT', NULL, 'Is the business in metro Atlanta?', 'YES_NO', 3, NULL, 'in_metro_atlanta', 1),
+  ('00000000-0000-4000-8000-000000000106', 'FIT', NULL, 'Is the business willing to work online?', 'YES_NO', 3, NULL, NULL, 2),
   ('00000000-0000-4000-8000-000000000102', 'FIT', NULL, 'How many employees does it have?', 'NUMBER', 2,
-     '{"bands":[{"min":0,"max":1,"points":0.4},{"min":2,"max":250,"points":1.0},{"min":251,"max":null,"points":0.3}]}', 'employee_count', 2),
-  ('00000000-0000-4000-8000-000000000103', 'FIT', NULL, 'Can I reach a decision maker?', 'YES_NO', 3, NULL, NULL, 3),
-  ('00000000-0000-4000-8000-000000000104', 'FIT', NULL, 'How well does their likely budget match my pricing?', 'RATING', 3, NULL, NULL, 4),
+     '{"bands":[{"min":0,"max":1,"points":0.4},{"min":2,"max":250,"points":1.0},{"min":251,"max":null,"points":0.3}]}', 'employee_count', 3),
+  ('00000000-0000-4000-8000-000000000103', 'FIT', NULL, 'Can I reach a decision maker?', 'YES_NO', 3, NULL, NULL, 4),
+  ('00000000-0000-4000-8000-000000000104', 'FIT', NULL, 'How well does their likely budget match my pricing?', 'RATING', 3, NULL, NULL, 5),
   ('00000000-0000-4000-8000-000000000105', 'FIT', NULL, 'Who handles their web and marketing today?', 'CHOICE', 2,
-     '{"choices":[{"code":"NOBODY","label":"Nobody","points":1.0},{"code":"OWNER","label":"The owner, part time","points":0.9},{"code":"FREELANCER","label":"A freelancer","points":0.6},{"code":"AGENCY","label":"Another agency","points":0.3},{"code":"IN_HOUSE","label":"An in-house team","points":0.2}]}', 'current_provider', 5),
-  ('00000000-0000-4000-8000-000000000201', 'NEED', 'technical-seo', 'Does the site fail Core Web Vitals on mobile?', 'YES_NO', 3, NULL, 'core_web_vitals_mobile', 1),
+     '{"choices":[{"code":"NOBODY","label":"Nobody","points":1.0},{"code":"OWNER","label":"The owner, part time","points":0.9},{"code":"FREELANCER","label":"A freelancer","points":0.6},{"code":"AGENCY","label":"Another agency","points":0.3},{"code":"IN_HOUSE","label":"An in-house team","points":0.2}]}', 'current_provider', 6),
+  ('00000000-0000-4000-8000-000000000201', 'NEED', 'technical-seo', 'Does the site pass Core Web Vitals on mobile?', 'YES_NO', 3, NULL, 'core_web_vitals_mobile', 1),
   ('00000000-0000-4000-8000-000000000202', 'NEED', 'technical-seo', 'How visible are they for their main search terms? (0 = invisible, 5 = dominant)', 'RATING', 3, '{"invert":true}', 'search_visibility', 2),
-  ('00000000-0000-4000-8000-000000000203', 'NEED', 'web-development', 'Do they have no website, or one that looks out of date?', 'YES_NO', 4, NULL, 'website_quality', 1),
-  ('00000000-0000-4000-8000-000000000204', 'NEED', 'web-development', 'Is the site hard to use on a phone?', 'YES_NO', 2, NULL, 'mobile_friendly', 2),
-  ('00000000-0000-4000-8000-000000000205', 'NEED', 'web-hosting', 'Is the site slow, insecure, or often down?', 'YES_NO', 3, NULL, 'hosting_quality', 1),
-  ('00000000-0000-4000-8000-000000000206', 'NEED', 'agentic-systems', 'Do they answer the same customer questions by hand, over and over?', 'YES_NO', 3, NULL, NULL, 1),
+  ('00000000-0000-4000-8000-000000000203', 'NEED', 'web-development', 'Do they have a website?', 'YES_NO', 4, NULL, 'has_website', 1),
+  ('00000000-0000-4000-8000-000000000211', 'NEED', 'web-development', 'Does their website look up to date?', 'YES_NO', 4, NULL, 'website_up_to_date', 2),
+  ('00000000-0000-4000-8000-000000000204', 'NEED', 'web-development', 'Is the site easy to use on a phone?', 'YES_NO', 2, NULL, 'mobile_friendly', 3),
+  ('00000000-0000-4000-8000-000000000205', 'NEED', 'web-hosting', 'Is the site fast?', 'YES_NO', 3, NULL, 'pagespeed_mobile', 1),
+  ('00000000-0000-4000-8000-000000000212', 'NEED', 'web-hosting', 'Is the site secure?', 'YES_NO', 3, NULL, 'https', 2),
+  ('00000000-0000-4000-8000-000000000213', 'NEED', 'web-hosting', 'Is the site reliably up?', 'YES_NO', 3, NULL, 'site_reliably_up', 3),
+  ('00000000-0000-4000-8000-000000000206', 'NEED', 'agentic-systems', 'Are their repeated customer questions answered automatically?', 'YES_NO', 3, NULL, NULL, 1),
   ('00000000-0000-4000-8000-000000000207', 'NEED', 'growth-marketing', 'How active is their marketing today? (0 = none, 5 = very active)', 'RATING', 3, '{"invert":true}', 'marketing_activity', 1),
-  ('00000000-0000-4000-8000-000000000208', 'NEED', 'lead-generation', 'Do they say they need more customers or more leads?', 'YES_NO', 4, NULL, NULL, 1),
-  ('00000000-0000-4000-8000-000000000209', 'NEED', 'process-re-engineering', 'Do they describe manual, repetitive, or error-prone work?', 'YES_NO', 3, NULL, NULL, 1),
-  ('00000000-0000-4000-8000-000000000210', 'NEED', 'cost-reduction', 'Are they paying for tools or vendors they could consolidate?', 'YES_NO', 3, NULL, NULL, 1);
+  ('00000000-0000-4000-8000-000000000208', 'NEED', 'lead-generation', 'Do they have enough new customers?', 'YES_NO', 4, NULL, NULL, 1),
+  ('00000000-0000-4000-8000-000000000214', 'NEED', 'lead-generation', 'Do they have enough new leads?', 'YES_NO', 4, NULL, NULL, 2),
+  ('00000000-0000-4000-8000-000000000209', 'NEED', 'process-re-engineering', 'Do they describe their work as automated?', 'YES_NO', 3, NULL, NULL, 1),
+  ('00000000-0000-4000-8000-000000000215', 'NEED', 'process-re-engineering', 'Do they describe their work as reliable?', 'YES_NO', 3, NULL, NULL, 2),
+  ('00000000-0000-4000-8000-000000000210', 'NEED', 'cost-reduction', 'Are their tools already consolidated?', 'YES_NO', 3, NULL, NULL, 1),
+  ('00000000-0000-4000-8000-000000000216', 'NEED', 'cost-reduction', 'Are their vendors already consolidated?', 'YES_NO', 3, NULL, NULL, 2);
 
 -- ---------------------------------------------------------------------------
 -- deal: one potential sale. A company can have several at once. The only
@@ -467,14 +548,15 @@ CREATE TABLE deal (
     id                    TEXT PRIMARY KEY CHECK (id = lower(id)),
     company_id            TEXT NOT NULL REFERENCES company(id) ON DELETE CASCADE,
     name                  TEXT NOT NULL,
-    stage                 TEXT NOT NULL DEFAULT 'QUALIFYING',
-    engagement_model      TEXT,
+    stage                 TEXT NOT NULL DEFAULT 'QUALIFYING',  -- SRT domain: DEAL_STAGE
+    engagement_model      TEXT,  -- SRT domain: ENGAGEMENT_MODEL
     primary_contact_id    TEXT REFERENCES contact(id) ON DELETE SET NULL,
     one_time_value_cents  INTEGER CHECK (one_time_value_cents >= 0),
     monthly_value_cents   INTEGER CHECK (monthly_value_cents >= 0),
     currency              TEXT NOT NULL DEFAULT 'USD',
     expected_close_date   TEXT,
     closed_at             TEXT,
+    total_deal_time       INTEGER,  -- seconds from created_at to closed_at; set by trigger when stage becomes WON or LOST, never by code
     lost_reason           TEXT,
     notes                 TEXT,
     owner_id              TEXT REFERENCES app_user(id),
@@ -482,6 +564,26 @@ CREATE TABLE deal (
     updated_at            TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
 );
 CREATE INDEX deal_company_idx ON deal(company_id);
+
+-- When a deal becomes WON or LOST, closed_at is stamped if it is empty, and
+-- total_deal_time is the whole seconds from created_at to closed_at.
+CREATE TRIGGER deal_total_time_ins AFTER INSERT ON deal
+WHEN NEW.stage IN ('WON', 'LOST')
+BEGIN
+    UPDATE deal
+       SET closed_at = COALESCE(closed_at, strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+           total_deal_time = CAST(ROUND((julianday(COALESCE(closed_at, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))) - julianday(created_at)) * 86400) AS INTEGER)
+     WHERE id = NEW.id;
+END;
+
+CREATE TRIGGER deal_total_time_upd AFTER UPDATE OF stage ON deal
+WHEN NEW.stage IN ('WON', 'LOST')
+BEGIN
+    UPDATE deal
+       SET closed_at = COALESCE(closed_at, strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+           total_deal_time = CAST(ROUND((julianday(COALESCE(closed_at, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))) - julianday(created_at)) * 86400) AS INTEGER)
+     WHERE id = NEW.id;
+END;
 CREATE INDEX deal_stage_idx ON deal(stage);
 
 CREATE TABLE deal_service (
@@ -500,12 +602,12 @@ CREATE TABLE agreement (
     company_id          TEXT NOT NULL REFERENCES company(id) ON DELETE RESTRICT,
     deal_id             TEXT REFERENCES deal(id) ON DELETE SET NULL,
     parent_agreement_id TEXT REFERENCES agreement(id) ON DELETE RESTRICT,
-    type                TEXT NOT NULL,
+    type                TEXT NOT NULL,  -- SRT domain: AGREEMENT_TYPE
     title               TEXT,
-    status              TEXT NOT NULL DEFAULT 'DRAFT',
-    engagement_model    TEXT,
+    status              TEXT NOT NULL DEFAULT 'DRAFT',  -- SRT domain: AGREEMENT_STATUS
+    engagement_model    TEXT,  -- SRT domain: ENGAGEMENT_MODEL
     amount_cents        INTEGER CHECK (amount_cents >= 0),
-    amount_period       TEXT,
+    amount_period       TEXT,  -- SRT domain: AMOUNT_PERIOD
     setup_fee_cents     INTEGER CHECK (setup_fee_cents >= 0),
     performance_terms   TEXT,                -- how results are measured and paid
     currency            TEXT NOT NULL DEFAULT 'USD',
@@ -559,7 +661,7 @@ CREATE TABLE activity (
     company_id  TEXT NOT NULL REFERENCES company(id) ON DELETE CASCADE,
     deal_id     TEXT REFERENCES deal(id) ON DELETE SET NULL,
     contact_id  TEXT REFERENCES contact(id) ON DELETE SET NULL,
-    kind        TEXT NOT NULL DEFAULT 'NOTE',
+    kind        TEXT NOT NULL DEFAULT 'NOTE',  -- SRT domain: ACTIVITY_KIND
     body        TEXT,
     occurred_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
     created_by  TEXT REFERENCES app_user(id),
@@ -577,7 +679,7 @@ CREATE TABLE task (
     deal_id      TEXT REFERENCES deal(id) ON DELETE SET NULL,
     agreement_id TEXT REFERENCES agreement(id) ON DELETE SET NULL,
     due_date     TEXT,
-    status       TEXT NOT NULL DEFAULT 'OPEN',
+    status       TEXT NOT NULL DEFAULT 'OPEN',  -- SRT domain: TASK_STATUS
     completed_at TEXT,
     owner_id     TEXT REFERENCES app_user(id),
     created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
@@ -591,12 +693,12 @@ CREATE INDEX task_company_idx ON task(company_id);
 -- ---------------------------------------------------------------------------
 CREATE TABLE notification (
     id           TEXT PRIMARY KEY CHECK (id = lower(id)),
-    kind         TEXT NOT NULL,
-    channel      TEXT NOT NULL DEFAULT 'EMAIL',
+    kind         TEXT NOT NULL,  -- SRT domain: NOTIFICATION_KIND
+    channel      TEXT NOT NULL DEFAULT 'EMAIL',  -- SRT domain: CHANNEL
     recipient    TEXT NOT NULL,
     subject      TEXT,
     body         TEXT,
-    status       TEXT NOT NULL DEFAULT 'STUBBED',
+    status       TEXT NOT NULL DEFAULT 'STUBBED',  -- SRT domain: NOTIFICATION_STATUS
     agreement_id TEXT REFERENCES agreement(id) ON DELETE SET NULL,
     provider_ref TEXT,
     error        TEXT,
@@ -742,6 +844,13 @@ BEGIN SELECT RAISE(ABORT, 'SRT violation: enrichment_fact.source not in ENRICHME
 CREATE TRIGGER srt_enrichment_fact_source_upd BEFORE UPDATE OF source ON enrichment_fact
 WHEN NEW.source IS NOT NULL AND NOT EXISTS (SELECT 1 FROM srt WHERE domain='ENRICHMENT_SOURCE' AND code=NEW.source AND active=1)
 BEGIN SELECT RAISE(ABORT, 'SRT violation: enrichment_fact.source not in ENRICHMENT_SOURCE'); END;
+
+CREATE TRIGGER srt_enrichment_key_value_type_ins BEFORE INSERT ON enrichment_key
+WHEN NEW.value_type IS NOT NULL AND NOT EXISTS (SELECT 1 FROM srt WHERE domain='ENRICHMENT_VALUE_TYPE' AND code=NEW.value_type AND active=1)
+BEGIN SELECT RAISE(ABORT, 'SRT violation: enrichment_key.value_type not in ENRICHMENT_VALUE_TYPE'); END;
+CREATE TRIGGER srt_enrichment_key_value_type_upd BEFORE UPDATE OF value_type ON enrichment_key
+WHEN NEW.value_type IS NOT NULL AND NOT EXISTS (SELECT 1 FROM srt WHERE domain='ENRICHMENT_VALUE_TYPE' AND code=NEW.value_type AND active=1)
+BEGIN SELECT RAISE(ABORT, 'SRT violation: enrichment_key.value_type not in ENRICHMENT_VALUE_TYPE'); END;
 
 CREATE TRIGGER srt_rubric_criterion_section_ins BEFORE INSERT ON rubric_criterion
 WHEN NEW.section IS NOT NULL AND NOT EXISTS (SELECT 1 FROM srt WHERE domain='RUBRIC_SECTION' AND code=NEW.section AND active=1)

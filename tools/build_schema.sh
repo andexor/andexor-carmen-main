@@ -4,7 +4,8 @@
 # Copyright 2026 Andexor Network, Inc.
 # Author: Ed Jenkins <ed@andexor.net>
 
-# Build db/carmen/0001_init.sql from 0001_init.base.sql plus the generated SRT triggers.
+# Build db/carmen/0001_init.sql from 0001_init.base.sql plus the generated SRT triggers,
+# then regenerate the entity-relationship diagrams in doc/uml/.
 # Run from the repo root. Add a line to the list below when a column starts holding an SRT code.
 
 set -euo pipefail
@@ -28,6 +29,7 @@ python3 tools/gen_srt_triggers.py \
     ai_run.recommendation:RECOMMENDATION \
     ai_run_fact.decision:PROPOSAL_STATUS \
     enrichment_fact.source:ENRICHMENT_SOURCE \
+    enrichment_key.value_type:ENRICHMENT_VALUE_TYPE \
     rubric_criterion.section:RUBRIC_SECTION \
     rubric_criterion.answer_type:ANSWER_TYPE \
     rubric_answer.source:ANSWER_SOURCE \
@@ -44,3 +46,4 @@ python3 tools/gen_srt_triggers.py \
     notification.status:NOTIFICATION_STATUS \
     >> "$OUT"
 echo "Wrote $OUT"
+python3 tools/gen_erd.py

@@ -25,8 +25,8 @@ Rationale: Carmen is only useful if capturing a lead takes seconds.
 
 ### III. Simplicity
 A feature MUST start in a specification. Nothing is built because it might be needed. Version 1
-MUST NOT add invoicing, mailbox or calendar sync, outbound email to prospects, automation rules,
-or role enforcement unless a Spec Kit specification requires them.
+MUST NOT add invoicing, mailbox or calendar sync, outbound email to prospects, or automation rules
+unless a Spec Kit specification requires them.
 Rationale: every extra feature is another screen to learn and another thing to break.
 
 ### IV. Nothing Reaches Production Untested
@@ -39,7 +39,8 @@ Rationale: a bad change must never reach production, and test data must never mi
 
 ### V. One Database, One Worker; Codes in the SRT
 Only `andexor-carmen-api` is bound to the database and the bucket. Every finite-value field MUST
-hold an UPPERCASE code from the System Reference Table (SRT), enforced by generated triggers.
+hold an UPPERCASE code from the System Reference Table (SRT), enforced by generated triggers, and
+its column definition MUST carry a `-- SRT domain: X` comment naming the domain.
 Adding a code is a migration. Runtime code MUST NOT issue Data Definition Language (DDL).
 Identifiers the system generates MUST be lowercase.
 Rationale: least privilege by construction, and one place to look for what a value can be.
@@ -48,7 +49,9 @@ Rationale: least privilege by construction, and one place to look for what a val
 Every request to the API, in production and in preview, MUST carry a valid Cloudflare Access token
 or arrive over a Service Binding. Secrets MUST live in Cloudflare Secrets Store, bound only to the
 Worker that needs them. API tokens, keys, and customer data MUST NOT appear in a repo, a log line,
-or an error response.
+or an error response. The API MUST enforce the signed-in user's role: READER reads anything and
+changes nothing; MEMBER reads and changes records but cannot delete anything, change users,
+settings, the rubric, the service catalog, or the AI model list; ADMIN can do anything.
 Rationale: a CRM holds other people's contact details and signed agreements.
 
 ### VII. AI Proposes, a Person Decides
@@ -56,7 +59,12 @@ An AI run MUST NOT change a company record. Proposed facts take effect only when
 them, and a scoring run's answers take effect only when a user applies the run. Every run MUST be
 kept with its model, answers, scores, token counts, and duration. All score arithmetic MUST be done
 in code, never by a model. Text fetched from the web is untrusted input.
-Rationale: models are wrong sometimes, and comparing them requires an honest record.
+Rubric questions, answers, and enrichment facts MUST be worded positively, so that yes, true, or a
+high value is always the good outcome (for example "Is the site mobile friendly?"). A need is
+identified where an answer is false or low. The scoring and matching code, never a person, MUST do
+that translation, and a person MUST NOT have to invert anything in their head.
+Rationale: models are wrong sometimes, and comparing them requires an honest record. A person who
+reads positive wording everywhere makes fewer mistakes than one who must flip some of it.
 
 ### VIII. Errors and Health (API)
 Every piece of code that can raise an error MUST be surrounded by its own try/except block, written
@@ -79,7 +87,8 @@ The UI MUST use the Andexor Network Design System as `andexor-net-website` rende
 dark palette with no theme toggle, the brand fonts, Font Awesome icons, `>>` mono eyebrows, and
 color-only hover with no link underlines. It MUST NOT use emoji, italics, or "&" for "and", and
 MUST use the Oxford comma. Every screen MUST work from 360 px to 1920 px wide and meet Web Content
-Accessibility Guidelines (WCAG) 2.2 AA.
+Accessibility Guidelines (WCAG) 2.2 AA. Whenever a search finds more than one match, the UI MUST
+present a list for the user to choose from.
 Rationale: Carmen and andexor.net should be recognizable as siblings at first sight.
 
 ## File Conventions
@@ -97,6 +106,7 @@ Rationale: Carmen and andexor.net should be recognizable as siblings at first si
   Cloudflare resources outside the Worker managed with the `cf` CLI.
 - UI: Node.js and npm; Next.js static export; Prettier with 4 spaces; Vitest and Playwright.
 - No Bun and no Docker unless a reason is recorded in a Spec Kit specification.
+- Whenever scaffolding of a Next.js or FastAPI app begins, its initial version MUST be set to `1.0.0` (the version in `package.json` or `pyproject.toml`).
 
 ## Delivery Workflow
 
@@ -114,4 +124,4 @@ removing or redefining a principle, MINOR for adding a principle or materially e
 PATCH for wording fixes. Reviewers MUST check each pull request against these principles, and any
 deviation MUST be justified in the pull request.
 
-**Version**: 2.0.0 | **Ratified**: 2026-11-15 | **Last Amended**: 2026-11-17
+**Version**: 2.1.0 | **Ratified**: 2026-11-15 | **Last Amended**: 2026-11-21

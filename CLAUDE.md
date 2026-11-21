@@ -18,10 +18,11 @@ The conventions in `andexor-glimpse-main/CLAUDE.md` apply here unchanged: naming
 2. **Few required fields.** Master PRD section 7 lists the only fields any table, endpoint, or form may require.
 3. **AI proposes, a person decides.** No run changes a company record. Score arithmetic is done in code.
 4. **Preview is gated.** Unlike the website services, Carmen's preview hostname (`carmen-preview.andexor.net`) sits behind Cloudflare Access.
+5. **Positive wording.** Rubric questions, answers, and enrichment facts are worded so that yes or true is the good outcome. A need is an answer that is false or low, and the scoring code does that translation, never a person (constitution Principle VII).
 
 ## Working in this repo
 
-- Edit `db/carmen/0001_init.base.sql`, never `0001_init.sql`. Then run `./tools/build_schema.sh && python3 tools/check_schemas.py`. When a new column holds an SRT code, add it to the list in `tools/build_schema.sh`.
+- Edit `db/carmen/0001_init.base.sql`, never `0001_init.sql`. Then run `./tools/build_schema.sh && python3 tools/check_schemas.py`. When a new column holds an SRT code, add it to the list in `tools/build_schema.sh` and add a `-- SRT domain: X` comment to its column definition (`check_schemas.py` fails if the two disagree). `build_schema.sh` also regenerates the E/R diagrams in `doc/uml/`, and `check_schemas.py` fails if they are stale.
 - Until the first production deploy, `0001_init` may be edited in place. After that, every change is a new numbered migration.
 - Keep `PRD.md` section numbers stable; the child PRDs cite them.
 - Verify Cloudflare and GitHub state with read-only calls before the first write.

@@ -4,9 +4,9 @@
 # Copyright 2026 Andexor Network, Inc.
 # Author: Ed Jenkins <ed@andexor.net>
 
-PLANTUML_VERSION=1.2026.8
+PLANTUML_VERSION=1.2026.10
+IMAGES=doc/uml/images
 
-rm -r -f dist/uml
-mkdir -p dist/uml/images
-cp -p doc/uml/*.puml dist/uml/
-java -jar .tools/plantuml-mit-${PLANTUML_VERSION}.jar -tsvg -o images dist/uml/*.puml
+rm -r -f ${IMAGES}
+mkdir -p ${IMAGES}
+java -jar .tools/plantuml-mit-${PLANTUML_VERSION}.jar -tsvg -o images doc/uml/*.puml

@@ -58,3 +58,6 @@ Thumbs.db
 
 # Test files
 test*.sh
+
+# PlantUML jar downloaded by install-plantuml.sh
+.tools/
