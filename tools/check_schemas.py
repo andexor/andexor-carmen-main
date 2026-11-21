@@ -2,10 +2,12 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Andexor Network, Inc.
 # Author: Ed Jenkins <ed@andexor.net>
-"""Load db/carmen/0001_init.sql and 0002_schema_review_fixes.sql into an in-memory SQLite database and run
+"""Load every migration in db/carmen, in order, into an in-memory SQLite database and run
 constraint smoke tests. Exit non-zero on any failure. Run from the repo root."""
 import pathlib
+import re
 import sqlite3
+import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -32,8 +34,13 @@ def check(label, ok):
 
 c = sqlite3.connect(":memory:")
 c.execute("PRAGMA foreign_keys=ON")
-c.executescript((ROOT / "db" / "carmen" / "0001_init.sql").read_text())
-c.executescript((ROOT / "db" / "carmen" / "0002_schema_review_fixes.sql").read_text())
+sys.path.insert(0, str(ROOT / "tools"))
+import build_schema
+import migrate
+
+files = migrate.migrations()
+for version, name, path in files:
+    c.executescript(path.read_text() + migrate.record(version, name))  # what migrate.py sends
 tables = c.execute("select count(*) from sqlite_master where type='table'").fetchone()[0]
 trig = c.execute("select count(*) from sqlite_master where type='trigger'").fetchone()[0]
 print(f"carmen: loaded, {tables} tables, {trig} triggers")
@@ -127,36 +134,46 @@ expect(c, "UPDATE ai_run SET finished_at=NULL WHERE id='run-d1'", False, "run fi
 check("clearing finished_at clears duration_ms", c.execute("SELECT duration_ms IS NULL FROM ai_run WHERE id='run-d1'").fetchone()[0] == 1)
 names = {r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='index'")}
 check("the four foreign key indexes exist", {"activity_contact_idx", "activity_deal_idx", "enrichment_ai_run_idx", "rubric_answer_run_idx"} <= names)
-check("schema_migration records versions 1 and 2", [r[0] for r in c.execute("SELECT version FROM schema_migration ORDER BY version")] == [1, 2])
+check("schema_migration lists every migration", [r[0] for r in c.execute("SELECT version FROM schema_migration ORDER BY version")] == [m[0] for m in files])
 
-# Every SRT column listed in build_schema.sh must carry a "-- SRT domain: X" comment in the base file, and no other column may.
-import re
-
-listed = dict(
-    tuple(x.split(":")) for x in re.findall(r"(\w+\.\w+:[A-Z_]+)", (ROOT / "tools" / "build_schema.sh").read_text())
-)
-commented = {}
-table = None
-for line in (ROOT / "db" / "carmen" / "0001_init.base.sql").read_text().splitlines():
-    t = re.match(r"\s*CREATE TABLE (\w+)", line)
-    if t:
-        table = t.group(1)
-        continue
-    col = re.match(r"\s+(\w+)\s+(TEXT|INTEGER|REAL|BLOB|NUMERIC)\b", line)
-    com = re.search(r"-- SRT domain: ([A-Z_]+)", line)
-    if col and com and table:
-        commented[f"{table}.{col.group(1)}"] = com.group(1)
-missing = sorted(k for k in listed if commented.get(k) != listed[k])
-extra = sorted(k for k in commented if k not in listed)
+# Every "-- SRT domain: X" comment has its pair of triggers, and every SRT trigger has a comment.
+commented = {t for base in build_schema.bases() for t in build_schema.srt_columns(base.read_text())}
+enforced = set()
+for (sql,) in c.execute("SELECT sql FROM sqlite_master WHERE type='trigger' AND name LIKE 'srt\\_%\\_ins' ESCAPE '\\'"):
+    m = re.search(r"INSERT ON (\w+)\s+WHEN NEW\.(\w+) .*?domain='([A-Z_]+)'", sql, re.S)
+    enforced.add(m.groups())
+missing, extra = sorted(commented - enforced), sorted(enforced - commented)
 failures += len(missing) + len(extra)
-print(f"  [{'PASS' if not (missing or extra) else 'FAIL'}] SRT domain comments match build_schema.sh ({len(listed)} columns)")
+print(f"  [{'PASS' if not (missing or extra) else 'FAIL'}] SRT domain comments match the SRT triggers ({len(commented)} columns)")
 for k in missing:
-    print(f"    missing or wrong comment: {k} (expected SRT domain {listed[k]})")
+    print(f"    comment without triggers: {k}")
 for k in extra:
-    print(f"    comment on a column not listed in build_schema.sh: {k}")
+    print(f"    triggers without a comment: {k}")
+
+# Built files are current, and a migration already on main has not changed.
+for base in build_schema.bases():
+    out = build_schema.built(base)
+    rel = out.relative_to(ROOT).as_posix()
+    ref, on_main = build_schema.frozen()
+    if rel in on_main:
+        r = subprocess.run(["git", "show", f"{ref}:{rel}"], cwd=ROOT, capture_output=True, text=True)
+        check(f"{rel} is unchanged from {ref}", r.stdout == out.read_text())
+        r = subprocess.run(["git", "show", f"{ref}:{base.relative_to(ROOT).as_posix()}"], cwd=ROOT, capture_output=True, text=True)
+        check(f"{base.name} is unchanged from {ref}", r.stdout == base.read_text())
+    else:
+        check(f"{rel} is up to date (run ./tools/build_schema.sh)", out.exists() and out.read_text() == build_schema.build(base.read_text()))
+
+# tools/migrate.py plans from schema_migration alone.
+check("nothing pending when every migration is applied", migrate.pending({m[0] for m in files}, files) == [])
+check("a new migration is pending", [m[0] for m in migrate.pending({m[0] for m in files[:-1]}, files)] == [files[-1][0]])
+for label, applied in (("a gap in applied versions", {1, 3}), ("a version the repo does not have", {m[0] for m in files} | {99})):
+    try:
+        migrate.pending(applied, files)
+        check(f"{label} is rejected", False)
+    except SystemExit:
+        check(f"{label} is rejected", True)
 
 # The diagrams in doc/uml must be what gen_erd.py would write now.
-sys.path.insert(0, str(ROOT / "tools"))
 import gen_erd
 
 expected = gen_erd.render_all()

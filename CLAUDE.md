@@ -22,8 +22,9 @@ The conventions in `andexor-glimpse-main/CLAUDE.md` apply here unchanged: naming
 
 ## Working in this repo
 
-- Edit the `.base.sql` file of the migration that is not yet applied, never the built `.sql`. Then run `./tools/build_schema.sh && python3 tools/check_schemas.py`. When a new column holds an SRT code, add it to the list in `tools/build_schema.sh` and add a `-- SRT domain: X` comment to its column definition (`check_schemas.py` fails if the two disagree). `build_schema.sh` also regenerates the E/R diagrams in `doc/uml/`, and `check_schemas.py` fails if they are stale.
-- `0001_init` was applied to both databases on 2026-11-21, so it is frozen. Every change is a new numbered migration (`0002_schema_review_fixes` is the first), built by `build_schema.sh` the same way. Apply a migration to preview first, then production, only when `schema_migration` has no row for its version.
+- Schema changes are numbered migrations in `db/carmen/`. `0001_init` and `0002_schema_review_fixes` are applied to both databases. Never edit a migration that is already on `main`: `build_schema.py` keeps it as it is and `check_schemas.py` fails if any SQL file on `main` has changed.
+- New migration: `./tools/new_migration.sh short_name`, write the changes in the `.base.sql` it creates, then `./tools/build_schema.sh && python3 tools/check_schemas.py`. A column that holds an SRT code carries a `-- SRT domain: X` comment (in `CREATE TABLE` or on an `ALTER TABLE ... ADD COLUMN` line); the triggers are generated from the comments in that file, and no list needs updating. Do not insert into `schema_migration`.
+- Apply with `python3 tools/migrate.py prev`, then `python3 tools/migrate.py prod` (add `--dry-run` to see what is pending). `schema_migration` decides what is pending. `build_schema.sh` also regenerates the E/R diagrams in `doc/uml/`, and `check_schemas.py` fails if they are stale. After a table change, run `./plantuml.sh` to redraw the SVG files in `doc/uml/images`.
 - Keep `PRD.md` section numbers stable; the child PRDs cite them.
 - Verify Cloudflare and GitHub state with read-only calls before the first write.
 
