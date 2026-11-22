@@ -17,11 +17,16 @@ Run from the repo root (build_schema.sh does this). check_schemas.py fails if th
 import pathlib
 import sqlite3
 import sys
+from typing import Any
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT = ROOT / "doc" / "uml"
 sys.path.insert(0, str(ROOT / "tools"))
 import build_schema  # noqa: E402
+
+Row = dict[str, Any]  # one column or one foreign key
+Cols = dict[str, list[Row]]
+Srt = dict[tuple[str, str], str]
 
 HEADER = (
     "' SPDX-License-Identifier: Apache-2.0\n"
@@ -32,40 +37,40 @@ HEADER = (
 STYLE = "hide circle\nskinparam nodesep 40\nskinparam ranksep 60\n"
 
 
-def load():
+def load() -> tuple[list[str], Cols, list[Row], Srt]:
     con = sqlite3.connect(":memory:")
     for p in sorted(build_schema.DB.glob("[0-9][0-9][0-9][0-9]_*.sql")):
         if not p.name.endswith(".base.sql"):
             con.executescript(p.read_text())
-    tables = [r[0] for r in con.execute("select name from sqlite_master where type='table' and name not like 'sqlite_%' order by name")]
-    cols = {}
-    rels = []
+    tables: list[str] = [r[0] for r in con.execute("select name from sqlite_master where type='table' and name not like 'sqlite_%' order by name")]
+    cols: Cols = {}
+    rels: list[Row] = []
     for t in tables:
         cols[t] = [dict(name=r[1], type=r[2] or "", notnull=bool(r[3]), pk=r[5]) for r in con.execute(f"pragma table_info({t})")]
         notnull = {c["name"]: c["notnull"] for c in cols[t]}
         for fk in con.execute(f"pragma foreign_key_list({t})"):
             rels.append(dict(child=t, col=fk[3], parent=fk[2], pcol=fk[4], nullable=not notnull[fk[3]]))
-    srt = {}
+    srt: Srt = {}
     for base in build_schema.bases():
         for t, c, d in build_schema.srt_columns(base.read_text()):
             srt[(t, c)] = d
     return tables, cols, rels, srt
 
 
-def line(rel, label):
+def line(rel: Row, label: bool) -> str:
     end = "o|" if rel["nullable"] else "||"
     text = f"{rel['child']} }}o--{end} {rel['parent']}"
     return f"{text} : {rel['col']}" if label else text
 
 
-def entity(table, cols, rels, srt, shown):
+def entity(table: str, cols: Cols, rels: list[Row], srt: Srt, shown: set[str] | None) -> str:
     """An entity block. shown is None for every column, or the set of column names to list."""
     fks = {r["col"] for r in rels if r["child"] == table}
     pks = sorted((c for c in cols[table] if c["pk"]), key=lambda c: c["pk"])
     rest = [c for c in cols[table] if not c["pk"] and (shown is None or c["name"] in shown)]
 
-    def row(c):
-        tags = []
+    def row(c: Row) -> str:
+        tags: list[str] = []
         if c["pk"]:
             tags.append("<<PK>>")
         if c["name"] in fks:
@@ -84,9 +89,9 @@ def entity(table, cols, rels, srt, shown):
     return "\n".join(out)
 
 
-def render_all():
+def render_all() -> dict[str, str]:
     tables, cols, rels, srt = load()
-    files = {}
+    files: dict[str, str] = {}
 
     body = [f"entity {t}" for t in tables] + [""] + [line(r, False) for r in rels]
     files["erd-summary.puml"] = (
@@ -96,10 +101,10 @@ def render_all():
     for t in tables:
         mine = [r for r in rels if r["child"] == t or r["parent"] == t]
         related = sorted({r["child"] for r in mine} | {r["parent"] for r in mine} | {t})
-        blocks = []
+        blocks: list[str] = []
         for o in related:
             if o == t:
-                shown = None
+                shown: set[str] | None = None
             else:
                 shown = set()
                 for r in mine:
@@ -115,7 +120,7 @@ def render_all():
     return files
 
 
-def main():
+def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     for old in OUT.glob("erd-*.puml"):
         old.unlink()
