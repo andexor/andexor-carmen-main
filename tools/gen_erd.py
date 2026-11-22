@@ -121,6 +121,7 @@ def render_all() -> dict[str, str]:
 
 
 def main() -> None:
+    build_schema.need_sqlite()
     OUT.mkdir(parents=True, exist_ok=True)
     for old in OUT.glob("erd-*.puml"):
         old.unlink()

@@ -6,19 +6,23 @@
 triggers. A column gets triggers when its definition carries a "-- SRT domain: X" comment, either in
 a CREATE TABLE or on an ALTER TABLE ... ADD COLUMN line, and only the file that declares it generates
 them. A migration already on main is never rebuilt. Run from the repo root."""
+import os
 import pathlib
 import re
+import shutil
+import sqlite3
 import subprocess
+import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 DB = ROOT / "db" / "carmen"
 
 TRIGGERS = """CREATE TRIGGER srt_{t}_{c}_ins BEFORE INSERT ON {t}
 WHEN NEW.{c} IS NOT NULL AND NOT EXISTS (SELECT 1 FROM srt WHERE domain='{d}' AND code=NEW.{c} AND active=1)
-BEGIN SELECT RAISE(ABORT, 'SRT violation: {t}.{c} not in {d}'); END;
+BEGIN SELECT RAISE(ABORT, 'SRT violation: {t}.{c} value ' || quote(NEW.{c}) || ' is not in {d}'); END;
 CREATE TRIGGER srt_{t}_{c}_upd BEFORE UPDATE OF {c} ON {t}
 WHEN NEW.{c} IS NOT NULL AND NEW.{c} IS NOT OLD.{c} AND NOT EXISTS (SELECT 1 FROM srt WHERE domain='{d}' AND code=NEW.{c} AND active=1)
-BEGIN SELECT RAISE(ABORT, 'SRT violation: {t}.{c} not in {d}'); END;
+BEGIN SELECT RAISE(ABORT, 'SRT violation: {t}.{c} value ' || quote(NEW.{c}) || ' is not in {d}'); END;
 """
 FOOTER = (
     "\n-- ---------------------------------------------------------------------------\n"
@@ -26,6 +30,20 @@ FOOTER = (
     "-- \"-- SRT domain:\" comments in this file; never edit by hand).\n"
     "-- ---------------------------------------------------------------------------\n"
 )
+
+
+def need_sqlite() -> None:
+    """The SRT triggers build their error message from the rejected value, which needs SQLite 3.47 or
+    later. When the SQLite in this Python is older, run the same script again on a Python that uv manages."""
+    if sqlite3.sqlite_version_info >= (3, 47):
+        return
+    found = f"this Python ({sys.executable}) has SQLite {sqlite3.sqlite_version}, and the migrations need 3.47 or later"
+    if os.environ.get("CARMEN_UV"):
+        raise SystemExit(f"{found}, even on the Python that uv chose. Run: uv python install 3.14")
+    if not shutil.which("uv"):
+        raise SystemExit(f"{found}. Install uv (https://docs.astral.sh/uv/) and run this again; it re-runs itself on a newer Python.")
+    cmd = ["uv", "run", "--quiet", "--no-project", "--managed-python", "--python", "3.14", "python", *sys.argv]
+    os.execvpe("uv", cmd, {**os.environ, "CARMEN_UV": "1"})
 
 
 def srt_columns(text: str) -> list[tuple[str, str, str]]:

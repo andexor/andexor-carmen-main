@@ -21,7 +21,7 @@ Both apps follow this model. The API implements it. The UI uses the same names f
 | `carmen/NNNN_name.base.sql` | One migration, hand-written. Edit it only until it is on `main`. |
 | `carmen/NNNN_name.sql` | The base file plus SRT triggers generated from its `-- SRT domain:` comments. Built by `tools/build_schema.sh`. Never edit by hand. |
 
-Migrations `0001_init` and `0002_schema_review_fixes` were applied to both databases on 2026-11-21. A migration on `main` is frozen: the build keeps it as it is, and `check_schemas.py` fails if it changes.
+Migrations `0001_init` and `0002_schema_review_fixes` were applied to both databases on 2026-11-21, and `0003_srt_violation_value` on 2026-11-22. A migration on `main` is frozen: the build keeps it as it is, and `check_schemas.py` fails if it changes.
 
 New migration: `./tools/new_migration.sh short_name`, write the changes, then `./tools/build_schema.sh && python3 tools/check_schemas.py`. Apply: `python3 tools/migrate.py prev`, then `prod`.
 
@@ -39,6 +39,8 @@ New migration: `./tools/new_migration.sh short_name`, write the changes, then `.
 ## System Reference Table (SRT)
 
 The `srt` table, `(domain, code, label, description, sort_order, active)`, is the authoritative list of every finite-value code. Codes are UPPERCASE. Each column that holds a code has a pair of generated triggers that reject any value not present and active in `srt` (the update trigger checks only when the column's value changes, so a row that holds a retired code can still be edited), and a `-- SRT domain: X` comment on its column definition naming the domain (SQLite has no column comment syntax, so a SQL comment is the only form). The comments are the only source: `build_schema.py` generates the triggers from the comments in each migration file, and `check_schemas.py` verifies every comment has its triggers and every SRT trigger has a comment. Adding or retiring a value is a migration that touches `srt`, never a code edit. The UI reads labels and order from `srt` through the API.
+
+A rejected value fails the statement with a message that names the table, column, value, and domain, for example `SRT violation: company.stage value 'HOT' is not in COMPANY_STAGE`. The message is built from the row, which needs SQLite 3.47 or later. Both databases have it. When the SQLite in your `python3` is older, `build_schema.sh` and `check_schemas.py` re-run themselves on a Python that `uv` manages, so `uv` must be installed.
 
 | Domain | Codes |
 | --- | --- |

@@ -27,3 +27,5 @@ tools/                build_schema.sh, check_schemas.py, new_migration.sh, migra
 ./tools/build_schema.sh
 python3 tools/check_schemas.py
 ```
+
+Both need SQLite 3.47 or later. When the SQLite in your `python3` is older, they re-run themselves on a Python that `uv` manages, so install `uv`.

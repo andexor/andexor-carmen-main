@@ -26,16 +26,26 @@ def expect(con: sqlite3.Connection, sql: str, should_fail: bool, label: str) -> 
     print(f"  [{'PASS' if ok else 'FAIL'}] {label}")
 
 
+def message(con: sqlite3.Connection, sql: str) -> str:
+    try:
+        con.execute(sql)
+        return ""
+    except sqlite3.Error as e:
+        return str(e)
+
+
 def check(label: str, ok: bool) -> None:
     global failures
     failures += 0 if ok else 1
     print(f"  [{'PASS' if ok else 'FAIL'}] {label}")
 
 
-c = sqlite3.connect(":memory:")
 sys.path.insert(0, str(ROOT / "tools"))
 import build_schema
 import migrate
+
+build_schema.need_sqlite()
+c = sqlite3.connect(":memory:")
 
 files = migrate.migrations()
 for version, name, path in files:
@@ -134,6 +144,12 @@ check("clearing finished_at clears duration_ms", c.execute("SELECT duration_ms I
 names = {r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='index'")}
 check("the four foreign key indexes exist", {"activity_contact_idx", "activity_deal_idx", "enrichment_ai_run_idx", "rubric_answer_run_idx"} <= names)
 check("schema_migration lists every migration", [r[0] for r in c.execute("SELECT version FROM schema_migration ORDER BY version")] == [m[0] for m in files])
+
+# Migration 0003 (issue #20): an SRT violation names the rejected value.
+check("SRT error on insert names the rejected value", message(c, "INSERT INTO company(id,name,stage) VALUES('sv1','Value Co','HOT')") == "SRT violation: company.stage value 'HOT' is not in COMPANY_STAGE")
+check("SRT error on update names the rejected value", message(c, "UPDATE company SET stage='HOT' WHERE id='c1'") == "SRT violation: company.stage value 'HOT' is not in COMPANY_STAGE")
+old = [r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='trigger' AND name LIKE 'srt%' AND sql NOT LIKE '%quote(NEW.%'")]
+check(f"every SRT trigger names the rejected value ({old or 'none left out'})", not old)
 
 # Every "-- SRT domain: X" comment has its pair of triggers, and every SRT trigger has a comment.
 commented = {t for base in build_schema.bases() for t in build_schema.srt_columns(base.read_text())}
