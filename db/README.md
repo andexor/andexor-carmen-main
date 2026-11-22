@@ -30,7 +30,6 @@ New migration: `./tools/new_migration.sh short_name`, write the changes, then `.
 - Files are `NNNN_short_name.sql`, four-digit zero-padded, numbered 1, 2, 3 with no gaps, applied in order. `0001_init.sql` is the baseline.
 - `tools/migrate.py` reads `schema_migration.version` to find the pending migrations and applies each file in one batch, which D1 runs as a transaction. The batch ends with `INSERT OR IGNORE` of the migration's own `schema_migration` row. `0001` and `0002` insert their own rows, and later files must not.
 - Migrations are the only path that runs Data Definition Language (DDL). They run through `tools/migrate.py`. Runtime code never issues `CREATE`, `ALTER`, or `DROP`.
-- `PRAGMA foreign_keys = ON` is set by the data-access layer on every request and at the top of each migration.
 - Identifiers the system generates are lowercase Universally Unique Identifiers (UUIDs). Service ids are lowercase slugs that match the page names on andexor.net.
 - Timestamps are ISO-8601 UTC text. Dates are `YYYY-MM-DD`.
 - Money is an integer number of cents plus a currency code (default `USD`).
