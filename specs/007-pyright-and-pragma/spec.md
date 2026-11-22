@@ -27,7 +27,7 @@ Author: Ed Jenkins <ed@andexor.net>
 
 - **FR-003**: `pyrightconfig.json` at the repo root is copied from `andexor-carmen-api` and keeps `"typeCheckingMode": "strict"`. `include` and `extraPaths` are `tools`, where this repo's Python files are. The virtual environment settings are left out, because this repo has no virtual environment and its tools use only the standard library.
 - **FR-004**: Every function in `tools/build_schema.py`, `tools/check_schemas.py`, `tools/gen_erd.py`, and `tools/migrate.py` has parameter and return types, and Pyright (Pylance) reports no errors in strict mode.
-- **FR-005**: The types change no behavior, with one exception: when an SRT trigger does not match the expected pattern, `tools/check_schemas.py` no longer stops with an exception. It fails the check and prints the trigger's name, the likely cause, and the fix.
+- **FR-005**: The types change no behavior, with one exception: when an SRT trigger does not match the expected pattern, `tools/check_schemas.py` no longer stops with an exception. It fails the check and prints what happened, the trigger's name, the migration file that creates it, the likely cause, and the fix.
 
 ## Success criteria
 
