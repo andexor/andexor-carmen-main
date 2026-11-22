@@ -14,7 +14,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 failures = 0
 
 
-def expect(con, sql, should_fail, label):
+def expect(con: sqlite3.Connection, sql: str, should_fail: bool, label: str) -> None:
     global failures
     try:
         con.execute(sql)
@@ -26,14 +26,13 @@ def expect(con, sql, should_fail, label):
     print(f"  [{'PASS' if ok else 'FAIL'}] {label}")
 
 
-def check(label, ok):
+def check(label: str, ok: bool) -> None:
     global failures
     failures += 0 if ok else 1
     print(f"  [{'PASS' if ok else 'FAIL'}] {label}")
 
 
 c = sqlite3.connect(":memory:")
-c.execute("PRAGMA foreign_keys=ON")
 sys.path.insert(0, str(ROOT / "tools"))
 import build_schema
 import migrate
@@ -138,10 +137,11 @@ check("schema_migration lists every migration", [r[0] for r in c.execute("SELECT
 
 # Every "-- SRT domain: X" comment has its pair of triggers, and every SRT trigger has a comment.
 commented = {t for base in build_schema.bases() for t in build_schema.srt_columns(base.read_text())}
-enforced = set()
+enforced: set[tuple[str, str, str]] = set()
 for (sql,) in c.execute("SELECT sql FROM sqlite_master WHERE type='trigger' AND name LIKE 'srt\\_%\\_ins' ESCAPE '\\'"):
     m = re.search(r"INSERT ON (\w+)\s+WHEN NEW\.(\w+) .*?domain='([A-Z_]+)'", sql, re.S)
-    enforced.add(m.groups())
+    if m:
+        enforced.add((m.group(1), m.group(2), m.group(3)))
 missing, extra = sorted(commented - enforced), sorted(enforced - commented)
 failures += len(missing) + len(extra)
 print(f"  [{'PASS' if not (missing or extra) else 'FAIL'}] SRT domain comments match the SRT triggers ({len(commented)} columns)")
@@ -177,7 +177,7 @@ for label, applied in (("a gap in applied versions", {1, 3}), ("a version the re
 import gen_erd
 
 expected = gen_erd.render_all()
-actual = {p.name: p.read_text() for p in (ROOT / "doc" / "uml").glob("erd-*.puml")} if (ROOT / "doc" / "uml").is_dir() else {}
+actual: dict[str, str] = {p.name: p.read_text() for p in (ROOT / "doc" / "uml").glob("erd-*.puml")} if (ROOT / "doc" / "uml").is_dir() else {}
 stale = sorted(n for n in expected if actual.get(n) != expected[n]) + sorted(n for n in actual if n not in expected)
 failures += len(stale)
 print(f"  [{'PASS' if not stale else 'FAIL'}] E/R diagrams in doc/uml are current ({len(expected)} files)")

@@ -28,9 +28,10 @@ FOOTER = (
 )
 
 
-def srt_columns(text):
+def srt_columns(text: str) -> list[tuple[str, str, str]]:
     """(table, column, domain) for every SRT-commented column definition, in file order."""
-    out, table = [], None
+    out: list[tuple[str, str, str]] = []
+    table: str | None = None
     for line in text.splitlines():
         m = re.match(r"\s*CREATE TABLE (\w+)", line)
         if m:
@@ -38,7 +39,7 @@ def srt_columns(text):
             continue
         a = re.match(r"\s*ALTER TABLE (\w+) ADD COLUMN (\w+)\s.*--\s*SRT domain: ([A-Z_]+)", line)
         if a:
-            out.append(a.groups())
+            out.append((a.group(1), a.group(2), a.group(3)))
             continue
         c = re.match(r"\s+(\w+)\s+(?:TEXT|INTEGER|REAL|BLOB|NUMERIC)\b.*--\s*SRT domain: ([A-Z_]+)", line)
         if c and table:
@@ -46,22 +47,22 @@ def srt_columns(text):
     return out
 
 
-def build(base_text):
+def build(base_text: str) -> str:
     cols = srt_columns(base_text)
     if not cols:
         return base_text
     return base_text.rstrip("\n") + "\n" + FOOTER + "\n" + "\n".join(TRIGGERS.format(t=t, c=c, d=d) for t, c, d in cols)
 
 
-def bases():
+def bases() -> list[pathlib.Path]:
     return sorted(DB.glob("[0-9][0-9][0-9][0-9]_*.base.sql"))
 
 
-def built(base):
+def built(base: pathlib.Path) -> pathlib.Path:
     return base.with_name(base.name.replace(".base.sql", ".sql"))
 
 
-def frozen():
+def frozen() -> tuple[str | None, set[str]]:
     """(ref, paths): the SQL files already on main, which must never change."""
     for ref in ("origin/main", "HEAD"):
         r = subprocess.run(["git", "ls-tree", "-r", "--name-only", ref, "--", "db/carmen"], cwd=ROOT, capture_output=True, text=True)
@@ -70,7 +71,7 @@ def frozen():
     return None, set()
 
 
-def main():
+def main() -> None:
     ref, paths = frozen()
     for base in bases():
         out = built(base)
