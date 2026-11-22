@@ -18,18 +18,18 @@ Both apps follow this model. The API implements it. The UI uses the same names f
 
 | File | What it is |
 | --- | --- |
-| `carmen/0001_init.base.sql` | The hand-written tables, indexes, and seed rows. Edit this one. |
-| `carmen/0001_init.sql` | The base file plus generated SRT triggers. Built by `tools/build_schema.sh`. Never edit by hand. Applied to both databases on 2026-11-21, so it is frozen. |
-| `carmen/0002_schema_review_fixes.base.sql` | Migration 0002, hand-written: reopen and rerun triggers, four foreign key indexes. Edit this one until it is applied. |
-| `carmen/0002_schema_review_fixes.sql` | The base file plus the generated SRT update triggers. Built by `tools/build_schema.sh`. Never edit by hand. |
+| `carmen/NNNN_name.base.sql` | One migration, hand-written. Edit it only until it is on `main`. |
+| `carmen/NNNN_name.sql` | The base file plus SRT triggers generated from its `-- SRT domain:` comments. Built by `tools/build_schema.sh`. Never edit by hand. |
 
-After any change: `./tools/build_schema.sh && python3 tools/check_schemas.py`.
+Migrations `0001_init` and `0002_schema_review_fixes` were applied to both databases on 2026-11-21. A migration on `main` is frozen: the build keeps it as it is, and `check_schemas.py` fails if it changes.
+
+New migration: `./tools/new_migration.sh short_name`, write the changes, then `./tools/build_schema.sh && python3 tools/check_schemas.py`. Apply: `python3 tools/migrate.py prev`, then `prod`.
 
 ## Conventions
 
-- Files are `NNNN_short_name.sql`, four-digit zero-padded, applied in order. `0001_init.sql` is the baseline.
-- The migration runner checks `schema_migration.version` before applying a file and inserts its row in the same transaction.
-- Migrations are the only path that runs Data Definition Language (DDL). They run from the API repo's deploy workflow. Runtime code never issues `CREATE`, `ALTER`, or `DROP`.
+- Files are `NNNN_short_name.sql`, four-digit zero-padded, numbered 1, 2, 3 with no gaps, applied in order. `0001_init.sql` is the baseline.
+- `tools/migrate.py` reads `schema_migration.version` to find the pending migrations and applies each file in one batch, which D1 runs as a transaction. The batch ends with `INSERT OR IGNORE` of the migration's own `schema_migration` row. `0001` and `0002` insert their own rows, and later files must not.
+- Migrations are the only path that runs Data Definition Language (DDL). They run through `tools/migrate.py`. Runtime code never issues `CREATE`, `ALTER`, or `DROP`.
 - `PRAGMA foreign_keys = ON` is set by the data-access layer on every request and at the top of each migration.
 - Identifiers the system generates are lowercase Universally Unique Identifiers (UUIDs). Service ids are lowercase slugs that match the page names on andexor.net.
 - Timestamps are ISO-8601 UTC text. Dates are `YYYY-MM-DD`.
@@ -39,7 +39,7 @@ After any change: `./tools/build_schema.sh && python3 tools/check_schemas.py`.
 
 ## System Reference Table (SRT)
 
-The `srt` table, `(domain, code, label, description, sort_order, active)`, is the authoritative list of every finite-value code. Codes are UPPERCASE. Each column that holds a code has a pair of generated triggers that reject any value not present and active in `srt` (the update trigger checks only when the column's value changes, so a row that holds a retired code can still be edited), and a `-- SRT domain: X` comment on its column definition naming the domain (SQLite has no column comment syntax, so a SQL comment is the only form; `check_schemas.py` verifies the comments match the list in `tools/build_schema.sh`). Adding or retiring a value is a migration that touches `srt`, never a code edit. The UI reads labels and order from `srt` through the API.
+The `srt` table, `(domain, code, label, description, sort_order, active)`, is the authoritative list of every finite-value code. Codes are UPPERCASE. Each column that holds a code has a pair of generated triggers that reject any value not present and active in `srt` (the update trigger checks only when the column's value changes, so a row that holds a retired code can still be edited), and a `-- SRT domain: X` comment on its column definition naming the domain (SQLite has no column comment syntax, so a SQL comment is the only form). The comments are the only source: `build_schema.py` generates the triggers from the comments in each migration file, and `check_schemas.py` verifies every comment has its triggers and every SRT trigger has a comment. Adding or retiring a value is a migration that touches `srt`, never a code edit. The UI reads labels and order from `srt` through the API.
 
 | Domain | Codes |
 | --- | --- |
@@ -99,7 +99,7 @@ PlantUML diagrams are in `doc/uml/`, generated from the built schema by `tools/g
 - `erd-summary.puml` shows every table as a block and a line wherever a foreign key joins two tables. The `company` and `app_user` tables are joined to many others, so this one is dense.
 - `erd-<table>.puml` exists for every table. It shows that table with all its columns, plus the tables it references and the tables that reference it. A table with no relationships, such as `srt`, `setting`, and `schema_migration`, appears alone. Those related tables list only their key columns. The line ends use crow's foot notation: a bar means exactly one parent, a circle means optional, and the fork means many. Each line is labeled with the foreign key column.
 
-Columns are marked `<<PK>>`, `<<FK>>`, and `<<SRT DOMAIN>>`, and `*` means required. `./tools/build_schema.sh` regenerates the files, and `check_schemas.py` fails if they are stale. To draw them, run `./install-plantuml.sh` once and then `./plantuml.sh`, which writes SVG files to `dist/uml/images`.
+Columns are marked `<<PK>>`, `<<FK>>`, and `<<SRT DOMAIN>>`, and `*` means required. `./tools/build_schema.sh` regenerates the files, and `check_schemas.py` fails if they are stale. To draw them, run `./install-plantuml.sh` once and then `./plantuml.sh`, which writes SVG files to `doc/uml/images`. Run `./plantuml.sh` after a table change.
 
 ## Rubric answers and `config_json`
 

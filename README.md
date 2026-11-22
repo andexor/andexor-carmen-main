@@ -17,7 +17,7 @@ PRD.md                master Product Requirements Document (draft 0.1, 2026-11-1
 db/                   the common data model: D1 schema, SRT codes, conventions
 doc/uml/              PlantUML E/R diagrams, generated from the schema
 api/                  (to be added) OpenAPI 3.1 contract for andexor-carmen-api
-tools/                build_schema.sh, check_schemas.py, gen_srt_triggers.py, gen_erd.py
+tools/                build_schema.sh, check_schemas.py, new_migration.sh, migrate.py, gen_erd.py
 .specify/             Spec Kit; memory/constitution.md is copied to the child repos
 ```
 
