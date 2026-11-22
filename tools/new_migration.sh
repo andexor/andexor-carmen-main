@@ -26,7 +26,5 @@ cat > "$file" <<SQL
 -- "-- SRT domain: X" comment on its line, in CREATE TABLE or ALTER TABLE ... ADD COLUMN; the
 -- triggers are generated. Then run ./tools/build_schema.sh and python3 tools/check_schemas.py.
 
-PRAGMA foreign_keys = ON;
-
 SQL
 echo "Created $file"
