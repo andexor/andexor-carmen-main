@@ -138,10 +138,14 @@ check("schema_migration lists every migration", [r[0] for r in c.execute("SELECT
 # Every "-- SRT domain: X" comment has its pair of triggers, and every SRT trigger has a comment.
 commented = {t for base in build_schema.bases() for t in build_schema.srt_columns(base.read_text())}
 enforced: set[tuple[str, str, str]] = set()
-for (sql,) in c.execute("SELECT sql FROM sqlite_master WHERE type='trigger' AND name LIKE 'srt\\_%\\_ins' ESCAPE '\\'"):
+for trigger, sql in c.execute("SELECT name, sql FROM sqlite_master WHERE type='trigger' AND name LIKE 'srt\\_%\\_ins' ESCAPE '\\'"):
     m = re.search(r"INSERT ON (\w+)\s+WHEN NEW\.(\w+) .*?domain='([A-Z_]+)'", sql, re.S)
     if m:
         enforced.add((m.group(1), m.group(2), m.group(3)))
+    else:
+        check(f"trigger {trigger} has the shape tools/build_schema.py generates", False)
+        print("    why: it was written by hand, or TRIGGERS in tools/build_schema.py changed and this pattern did not")
+        print("    fix: delete it from the .base.sql and mark the column with '-- SRT domain: X', or update the pattern here")
 missing, extra = sorted(commented - enforced), sorted(enforced - commented)
 failures += len(missing) + len(extra)
 print(f"  [{'PASS' if not (missing or extra) else 'FAIL'}] SRT domain comments match the SRT triggers ({len(commented)} columns)")
