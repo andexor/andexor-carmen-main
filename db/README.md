@@ -113,6 +113,8 @@ Columns are marked `<<PK>>`, `<<FK>>`, and `<<SRT DOMAIN>>`, and `*` means requi
 | `NUMBER` | the number | `{"bands": [{"min": 0, "max": 10, "points": 0.5}, ...]}`; `max: null` means no upper limit | the matching band's points; 0 if none |
 | `CHOICE` | a choice code | `{"choices": [{"code": "X", "label": "...", "points": 1.0}, ...]}` | the choice's points |
 
+Points say how good an answer is: every question is worded so that Yes, or a high value, is the good outcome. For a question in the `NEED` section the scoring code of `andexor-carmen-api` turns that into need: Need is the share of the points that were not earned. No Need question carries `invert` for that, and `invert` is only for a question whose wording cannot be made positive.
+
 An unanswered criterion has no row. The scoring formulas are in master PRD section 8.2.
 
 ## Research and scoring runs
