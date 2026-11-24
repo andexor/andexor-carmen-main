@@ -21,7 +21,7 @@ Both apps follow this model. The API implements it. The UI uses the same names f
 | `carmen/NNNN_name.base.sql` | One migration, hand-written. Edit it only until it is on `main`. |
 | `carmen/NNNN_name.sql` | The base file plus SRT triggers generated from its `-- SRT domain:` comments. Built by `tools/build_schema.sh`. Never edit by hand. |
 
-Migrations `0001_init` and `0002_schema_review_fixes` were applied to both databases on 2026-11-21, `0003_srt_violation_value` on 2026-11-22, and `0004_research_max_pages_16` to `0010_import_max_rows` on 2026-11-24. `0011_digest_days` and `0012_renewal_policy` are applied by the pipeline of `andexor-carmen-api`, to the preview and then to production. A migration on `main` is frozen: the build keeps it as it is, and `check_schemas.py` fails if it changes.
+Every migration on `main` is applied to both databases, the preview first and then production. Migrations `0001` to `0010` were applied by hand with `tools/migrate.py`; from `0011` on, the pipeline of `andexor-carmen-api` applies them. The `schema_migration` table in each database records each migration and when it was applied, and `python3 tools/migrate.py prev --dry-run` (or `prod`) shows whether any is pending. A migration on `main` is frozen: the build keeps it as it is, and `check_schemas.py` fails if it changes.
 
 New migration: `./tools/new_migration.sh short_name`, write the changes, then `./tools/build_schema.sh && python3 tools/check_schemas.py`. Apply: `python3 tools/migrate.py prev`, then `prod`.
 
