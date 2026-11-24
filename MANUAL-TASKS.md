@@ -38,4 +38,4 @@ Online DNS scanners that look only at `carmen.andexor.net` report no SPF, DKIM, 
 
 ## GitHub
 
-- [ ] Default-branch ruleset with the required check `Preview and smoke test`, after the workflow has run once.
+- [x] (2026-11-24) Default-branch ruleset with the required check `Preview and smoke test`, after the workflow has run once. Verified with the GitHub API: `andexor-default-ruleset` is active on the default branch and requires that check.
