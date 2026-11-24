@@ -21,7 +21,7 @@ Both apps follow this model. The API implements it. The UI uses the same names f
 | `carmen/NNNN_name.base.sql` | One migration, hand-written. Edit it only until it is on `main`. |
 | `carmen/NNNN_name.sql` | The base file plus SRT triggers generated from its `-- SRT domain:` comments. Built by `tools/build_schema.sh`. Never edit by hand. |
 
-Migrations `0001_init` and `0002_schema_review_fixes` were applied to both databases on 2026-11-21, `0003_srt_violation_value` on 2026-11-22, and `0004_research_max_pages_16` to `0010_import_max_rows` on 2026-11-24. `0011_digest_days` is applied by the pipeline of `andexor-carmen-api`, to the preview and then to production. A migration on `main` is frozen: the build keeps it as it is, and `check_schemas.py` fails if it changes.
+Migrations `0001_init` and `0002_schema_review_fixes` were applied to both databases on 2026-11-21, `0003_srt_violation_value` on 2026-11-22, and `0004_research_max_pages_16` to `0010_import_max_rows` on 2026-11-24. `0011_digest_days` and `0012_renewal_policy` are applied by the pipeline of `andexor-carmen-api`, to the preview and then to production. A migration on `main` is frozen: the build keeps it as it is, and `check_schemas.py` fails if it changes.
 
 New migration: `./tools/new_migration.sh short_name`, write the changes, then `./tools/build_schema.sh && python3 tools/check_schemas.py`. Apply: `python3 tools/migrate.py prev`, then `prod`.
 
@@ -64,6 +64,8 @@ A rejected value fails the statement with a message that names the table, column
 | `AGREEMENT_TYPE` | MSA, SOW, NDA, CHANGE_ORDER, OTHER |
 | `AGREEMENT_STATUS` | DRAFT, SENT, ACTIVE, COMPLETED, EXPIRED, TERMINATED |
 | `AMOUNT_PERIOD` | ONE_TIME, MONTHLY |
+| `RENEWAL_POLICY` | ONE_TIME, AUTO_RENEW, APPROVAL |
+| `END_BASIS` | SIGNED_CONTRACT, INTERNAL_DECISION |
 | `ACTIVITY_KIND` | NOTE, CALL, MEETING, EMAIL, STAGE_CHANGE, SCORE_CHANGE, SYSTEM |
 | `TASK_STATUS` | OPEN, DONE, CANCELLED |
 | `NOTIFICATION_KIND` | DAILY_DIGEST, RENEWAL_ALERT |
@@ -143,3 +145,15 @@ The table is a hint list, not a constraint. `enrichment_fact.key` has no foreign
 ## Documents
 
 `document` holds metadata only. The file is an object in the R2 bucket at `r2_key` (`<company_id>/<document_id>`). The API writes the object first, then the row; it deletes the row first, then the object. `sha256` lets a download be verified.
+
+## The renewal policy of an agreement
+
+An agreement's `renewal_policy` says what happens at its end, and it has no default: a person chooses it before the agreement becomes active.
+
+| Policy | End date | At the end |
+| --- | --- | --- |
+| `ONE_TIME` | Optional | The agreement becomes `COMPLETED` |
+| `AUTO_RENEW` | None | Nothing: it runs until it is terminated |
+| `APPROVAL` | Required, with `term_months` | It becomes `EXPIRED`, unless the renewal was approved, which moves the end date forward by the term |
+
+`end_basis` says what the end rests on: `SIGNED_CONTRACT`, or `INTERNAL_DECISION` with `end_basis_reason` naming the criteria or the event. The schema checks the codes and that a term is at least one month. Which fields an active agreement must hold is checked by `andexor-carmen-api`.

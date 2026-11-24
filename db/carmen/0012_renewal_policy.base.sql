@@ -1,0 +1,31 @@
+-- SPDX-License-Identifier: Apache-2.0
+-- Copyright 2026 Andexor Network, Inc.
+-- Author: Ed Jenkins <ed@andexor.net>
+
+-- Migration: renewal_policy.
+-- What happens when an agreement reaches its end is a policy that a person chooses, with no
+-- default: one time, renews automatically, or renews on approval. The agreement also records what
+-- its end rests on, a signed contract or an internal decision, with a reason, and the length of
+-- its term for a renewal on approval. The flag auto_renews, which defaulted to "no", is removed;
+-- no agreement existed in either database when this was written (2026-11-24). Which fields an
+-- active agreement must hold is a rule of the API, not of the schema. Issue #38.
+--
+-- Write only this migration's changes. Never edit another migration file, and do not insert into
+-- schema_migration (tools/migrate.py does). Mark every column that holds an SRT code with a
+-- "-- SRT domain: X" comment on its line, in CREATE TABLE or ALTER TABLE ... ADD COLUMN; the
+-- triggers are generated. Then run ./tools/build_schema.sh and python3 tools/check_schemas.py.
+
+INSERT INTO srt (domain, code, label, description, sort_order) VALUES
+  ('RENEWAL_POLICY', 'ONE_TIME', 'One time', 'Ends at its end date and is then completed', 1),
+  ('RENEWAL_POLICY', 'AUTO_RENEW', 'Renews automatically', 'Runs with no end date until it is terminated', 2),
+  ('RENEWAL_POLICY', 'APPROVAL', 'Renews on approval', 'Runs for a term; it expires at its end date unless the renewal is approved', 3),
+
+  ('END_BASIS', 'SIGNED_CONTRACT', 'Signed contract', 'The end and the renewal follow a contract the customer signed', 1),
+  ('END_BASIS', 'INTERNAL_DECISION', 'Internal decision', 'The end and the renewal follow our own criteria or an event; the reason says which', 2);
+
+ALTER TABLE agreement ADD COLUMN renewal_policy TEXT;  -- SRT domain: RENEWAL_POLICY
+ALTER TABLE agreement ADD COLUMN end_basis TEXT;  -- SRT domain: END_BASIS
+ALTER TABLE agreement ADD COLUMN end_basis_reason TEXT;
+ALTER TABLE agreement ADD COLUMN term_months INTEGER CHECK (term_months > 0);
+
+ALTER TABLE agreement DROP COLUMN auto_renews;
