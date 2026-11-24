@@ -108,7 +108,7 @@ Columns are marked `<<PK>>`, `<<FK>>`, and `<<SRT DOMAIN>>`, and `*` means requi
 
 | Answer type | Stored `value` | `config_json` | Points |
 | --- | --- | --- | --- |
-| `YES_NO` | `YES` or `NO` | `{"invert": true}` to make No the good answer | Yes = 1, No = 0 |
+| `YES_NO` | `YES` or `NO` | `{"invert": true}` to make No the good answer. `{"yes_at": 90}` makes the criterion measured: code answers it from the fact named by `enrichment_key`, Yes at or above the number and No below, and no model is asked | Yes = 1, No = 0 |
 | `RATING` | `0` to `5` | `{"invert": true}` to make 0 the good answer | value ÷ 5 |
 | `NUMBER` | the number | `{"bands": [{"min": 0, "max": 10, "points": 0.5}, ...]}`; `max: null` means no upper limit | the matching band's points; 0 if none |
 | `CHOICE` | a choice code | `{"choices": [{"code": "X", "label": "...", "points": 1.0}, ...]}` | the choice's points |
