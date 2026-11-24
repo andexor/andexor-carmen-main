@@ -26,13 +26,16 @@ entity agreement {
     signed_date : TEXT
     effective_date : TEXT
     end_date : TEXT
-  * auto_renews : INTEGER
     renewal_notice_days : INTEGER
     terminated_at : TEXT
     notes : TEXT
     owner_id : TEXT <<FK>>
   * created_at : TEXT
   * updated_at : TEXT
+    renewal_policy : TEXT <<SRT RENEWAL_POLICY>>
+    end_basis : TEXT <<SRT END_BASIS>>
+    end_basis_reason : TEXT
+    term_months : INTEGER
 }
 
 entity agreement_service {
