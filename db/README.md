@@ -21,7 +21,7 @@ Both apps follow this model. The API implements it. The UI uses the same names f
 | `carmen/NNNN_name.base.sql` | One migration, hand-written. Edit it only until it is on `main`. |
 | `carmen/NNNN_name.sql` | The base file plus SRT triggers generated from its `-- SRT domain:` comments. Built by `tools/build_schema.sh`. Never edit by hand. |
 
-Migrations `0001_init` and `0002_schema_review_fixes` were applied to both databases on 2026-11-21, `0003_srt_violation_value` on 2026-11-22, and `0004_research_max_pages_16` on 2026-11-24. A migration on `main` is frozen: the build keeps it as it is, and `check_schemas.py` fails if it changes.
+Migrations `0001_init` and `0002_schema_review_fixes` were applied to both databases on 2026-11-21, `0003_srt_violation_value` on 2026-11-22, and `0004_research_max_pages_16` and `0005_enable_jev` on 2026-11-24. A migration on `main` is frozen: the build keeps it as it is, and `check_schemas.py` fails if it changes.
 
 New migration: `./tools/new_migration.sh short_name`, write the changes, then `./tools/build_schema.sh && python3 tools/check_schemas.py`. Apply: `python3 tools/migrate.py prev`, then `prod`.
 
