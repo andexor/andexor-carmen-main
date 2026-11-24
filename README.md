@@ -16,7 +16,6 @@ CLAUDE.md             conventions for the three Carmen repos; read first
 PRD.md                master Product Requirements Document (draft 0.1, 2026-11-15)
 db/                   the common data model: D1 schema, SRT codes, conventions
 doc/uml/              PlantUML E/R diagrams, generated from the schema
-api/                  (to be added) OpenAPI 3.1 contract for andexor-carmen-api
 tools/                build_schema.sh, check_schemas.py, new_migration.sh, migrate.py, gen_erd.py
 .specify/             Spec Kit; memory/constitution.md is copied to the child repos
 ```

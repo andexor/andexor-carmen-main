@@ -7,7 +7,7 @@ This repo governs the Andexor Carmen family. It holds no runtime code. Read this
 - **`PRD.md`** is the master Product Requirements Document (PRD). Each child repo's `PRD.md` and Spec Kit artifacts (`spec.md`, `plan.md`, `tasks.md`) refine it and may not contradict it.
 - **`Spec Kit`** is where all new requirements go. The master PRD and the child PRDs are frozen once the first commit of them lands: they seed the initial requirements only and are no longer edited. A later requirement that changes something the PRD says is recorded in Spec Kit, and where they differ, the Spec Kit artifact wins.
 - **`db/`** is the common data model both apps follow: the Data Definition Language (DDL) for the one Carmen database. Schema changes are numbered migrations; see `db/README.md`.
-- **`api/`** will hold the OpenAPI 3.1 contract for `andexor-carmen-api`, drafted from the API PRD. Once code exists, FastAPI's generated specification replaces it.
+- **The API contract** is the OpenAPI 3.1 specification that FastAPI generates from the code of `andexor-carmen-api`. This repo holds no hand-written draft of it and has no `api/` folder.
 - **`.specify/memory/constitution.md`** is the Spec Kit constitution. It is copied, not rewritten, into the child repos.
 
 ## Standing conventions

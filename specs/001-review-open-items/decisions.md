@@ -54,7 +54,7 @@ This note records the outcome of a review of Product Requirements Document (PRD)
 - Repos created in the `andexor` organization: done. Pushed: `andexor-carmen-main` only. The api and ui repos get their content when work begins there.
 - Ed reviews the PRD and the two child PRDs: done.
 - Q answers: Q2, Q3, and Q7 closed. Q1, Q4, Q5, Q6, and Q8 open (see above).
-- API contract (`api/carmen-api.openapi.yaml`): not started.
+- API contract (`api/carmen-api.openapi.yaml`): not needed. The contract is the specification FastAPI generates from the code (spec 010).
 - Discovery R1 to R3: not started.
 
 ## Setup steps found during the review
