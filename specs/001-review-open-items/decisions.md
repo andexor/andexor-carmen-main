@@ -22,25 +22,25 @@ This note records the outcome of a review of Product Requirements Document (PRD)
 | R6: AI cost | Mitigated. Tokens and duration are recorded per run, and the new `ai_run.search_count` column records web searches, which are billed per search. | api repo: fill `search_count`, and cap searches per run (discovery task D5). |
 | R7: Prompt injection from fetched pages | Mitigated by design. Fetched text is untrusted (Principle VII), models get no tools beyond search, and nothing is applied automatically. | api repo: parse model output strictly into fixed fields, and reject output that does not match the schema. |
 | Q3: Jev access | Closed. Access is obtained and the keys exist. | api setup: store the TypeSafe Console key in Secrets Store as `carmen-typesafe-api-key`, then enable the Jev model in Settings. A copy in GitHub secrets is not visible to the Worker. |
+| Q1: The real rubric | Closed on 2026-11-25. Ed read the seeded Fit and Need criteria and accepted them as the rubric (spec 012). | None. Criteria stay editable in the UI. |
+| Q5: Email provider | Closed on 2026-11-25. Cloudflare Email Sending; a digest was sent from the running Worker on the preview and tested (see below). | Test a digest from production. |
+| Q6: Grass Spider transport | Closed on 2026-11-25. The API side is done, and that is as far as it can go for now. | The Grass Spider service that will call the API is not written yet. It may need work when it is. |
 | Q8: Which Claude model | Closed on 2026-11-25. The Claude model is `claude-sonnet-5-5`, for research and for scoring (spec 011). | None. The seed and both databases already hold it. A later change is one edit of `ai_model.model_id` in Settings. |
 
 ## Still open
 
 | Item | What closes it |
 | --- | --- |
-| Q1: The real rubric | Ed writes the Fit and Need criteria in the UI once it exists. Not a blocker. The placeholders stay in the seed as sample data. |
-| Q4: Contact Us change | A spec in `andexor-net-website-contact-us` once `create_lead` exists. |
-| Q5: Email provider | See the decision below. Closes when a real digest reaches the inbox from the running Worker. |
-| Q6: Grass Spider transport | Chosen when Grass Spider is ready to call `create_lead` and `add_facts`. |
+| Q4: Contact Us change | The API side is done as of 2026-11-25. Closes when `andexor-net-website-contact-us` has been checked and any work it still needs is done. |
 | R1: FastAPI on Python Workers | Discovery in the api repo. |
 | R2: An AI run outlasts one request | Discovery in the api repo. |
 
-## Q5: Email provider (decided, not yet closed)
+## Q5: Email provider (closed)
 
 - Provider: Cloudflare Email Sending, through the `send_email` binding. Version 1 sends to Ed only.
 - Sending domain: `carmen.andexor.net`. Its records sit on `cf-bounce.carmen.andexor.net` (Mail Exchange (MX) and Sender Policy Framework (SPF)), `cf-bounce._domainkey.carmen.andexor.net` (DomainKeys Identified Mail (DKIM)), and `_dmarc.carmen.andexor.net` (Domain-based Message Authentication, Reporting, and Conformance (DMARC)). The root records belong to Google Workspace and are unchanged.
 - Verified on 2026-11-19: a test email sent with the REST API reached `ed@andexor.net`, and SPF, DKIM, and DMARC all pass.
-- Remaining: in the api repo, add the `send_email` binding and send one real digest to confirm it reaches the inbox.
+- Done on the preview as of 2026-11-25: a digest was sent from the running Worker and tested. Remaining: test a digest from production.
 - Manual steps are tracked in `MANUAL-TASKS.md`.
 
 ## Changes to what the PRD says
@@ -53,7 +53,7 @@ This note records the outcome of a review of Product Requirements Document (PRD)
 
 - Repos created in the `andexor` organization: done. Pushed: `andexor-carmen-main` only. The api and ui repos get their content when work begins there.
 - Ed reviews the PRD and the two child PRDs: done.
-- Q answers: Q2, Q3, Q7, and Q8 closed. Q1, Q4, Q5, and Q6 open (see above).
+- Q answers: Q1, Q2, Q3, Q5, Q6, Q7, and Q8 closed. Q4 open (see above).
 - API contract (`api/carmen-api.openapi.yaml`): not needed. The contract is the specification FastAPI generates from the code (spec 010).
 - Discovery R1 to R3: not started.
 
