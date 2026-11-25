@@ -1,0 +1,34 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Andexor Network, Inc.
+# Author: Ed Jenkins <ed@andexor.net>
+
+# Runs the schema checks and the type checker on every pull request and on every push to main.
+
+name: Checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    # The default-branch ruleset requires a check with this exact name. This repo deploys nothing,
+    # so here the name stands for the schema checks and the type checker.
+    name: Preview and smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # check_schemas.py compares the migrations with origin/main
+          persist-credentials: false
+      # check_schemas.py needs SQLite 3.47 or later and re-runs itself on a Python that uv manages.
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+      - name: Schema checks
+        run: python3 tools/check_schemas.py
+      - name: Type checks
+        run: npx --yes pyright@1.1.414
