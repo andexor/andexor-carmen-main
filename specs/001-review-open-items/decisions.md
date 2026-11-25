@@ -16,6 +16,8 @@ This note records the outcome of a review of Product Requirements Document (PRD)
 
 | Item | Decision | Carried to |
 | --- | --- | --- |
+| R1: FastAPI on Python Workers | Closed on 2026-11-25. Handled in `andexor-carmen-api`: the API runs as FastAPI on Python Workers (spec 013). | None. |
+| R2: An AI run outlasts one request | Closed on 2026-11-25. Handled with a queue, chosen after measuring several tests (spec 013). | None. |
 | R3: Cloudflare Access on preview | Closed by decision. Preview is served on `carmen-preview.andexor.net`, an ordinary hostname on the andexor.net zone, so the workers.dev concern no longer applies. The API verifies the Access token on every request (constitution Principle VI), which is the fallback the PRD named. | api repo: D3 (Access plus a GitHub Actions service token). ui repo: D2 (Playwright signs in with that token). Also, a service-token request carries no user email, so the API needs a rule for machine callers, such as a service-token identity in place of the email. |
 | R4: D1 limits | Accepted. The 10 GB limit is far above CRM volume, and documents live in R2. | api repo: batch the Comma-Separated Values (CSV) import and "accept all facts" writes, and check the current D1 per-query limits when those features are specified. |
 | R5: AI answers can be wrong | Mitigated by design. Nothing is applied without a user action (Principle VII), every answer keeps its source and run id, and ratings and comparison views show which models to trust. The risk itself remains. | none |
@@ -32,8 +34,6 @@ This note records the outcome of a review of Product Requirements Document (PRD)
 | Item | What closes it |
 | --- | --- |
 | Q4: Contact Us change | The API side is done as of 2026-11-25. Closes when `andexor-net-website-contact-us` has been checked and any work it still needs is done. |
-| R1: FastAPI on Python Workers | Discovery in the api repo. |
-| R2: An AI run outlasts one request | Discovery in the api repo. |
 
 ## Q5: Email provider (closed)
 
@@ -55,7 +55,7 @@ This note records the outcome of a review of Product Requirements Document (PRD)
 - Ed reviews the PRD and the two child PRDs: done.
 - Q answers: Q1, Q2, Q3, Q5, Q6, Q7, and Q8 closed. Q4 open (see above).
 - API contract (`api/carmen-api.openapi.yaml`): not needed. The contract is the specification FastAPI generates from the code (spec 010).
-- Discovery R1 to R3: not started.
+- Discovery R1 to R3: closed (see above).
 
 ## Setup steps found during the review
 

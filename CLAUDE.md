@@ -34,4 +34,4 @@ The conventions in `andexor-glimpse-main/CLAUDE.md` apply here unchanged: naming
 
 ## Open items
 
-Master PRD section 12, Q4, and discovery items R1 to R3. Their status is in `specs/001-review-open-items/decisions.md`.
+Q4 (master PRD section 12) is the only open item. Its status, and how the other questions and discovery items were closed, is in `specs/001-review-open-items/decisions.md`.
