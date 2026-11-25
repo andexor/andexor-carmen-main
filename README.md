@@ -28,3 +28,5 @@ python3 tools/check_schemas.py
 ```
 
 Both need SQLite 3.47 or later. When the SQLite in your `python3` is older, they re-run themselves on a Python that `uv` manages, so install `uv`.
+
+The workflow `.github/workflows/checks.yml` runs `check_schemas.py` and pyright on every pull request and on every push to `main`. It reports as `Preview and smoke test`, the check the default-branch ruleset requires.
