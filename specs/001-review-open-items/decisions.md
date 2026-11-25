@@ -22,6 +22,7 @@ This note records the outcome of a review of Product Requirements Document (PRD)
 | R6: AI cost | Mitigated. Tokens and duration are recorded per run, and the new `ai_run.search_count` column records web searches, which are billed per search. | api repo: fill `search_count`, and cap searches per run (discovery task D5). |
 | R7: Prompt injection from fetched pages | Mitigated by design. Fetched text is untrusted (Principle VII), models get no tools beyond search, and nothing is applied automatically. | api repo: parse model output strictly into fixed fields, and reject output that does not match the schema. |
 | Q3: Jev access | Closed. Access is obtained and the keys exist. | api setup: store the TypeSafe Console key in Secrets Store as `carmen-typesafe-api-key`, then enable the Jev model in Settings. A copy in GitHub secrets is not visible to the Worker. |
+| Q8: Which Claude model | Closed on 2026-11-25. The Claude model is `claude-sonnet-5-5`, for research and for scoring (spec 011). | None. The seed and both databases already hold it. A later change is one edit of `ai_model.model_id` in Settings. |
 
 ## Still open
 
@@ -31,7 +32,6 @@ This note records the outcome of a review of Product Requirements Document (PRD)
 | Q4: Contact Us change | A spec in `andexor-net-website-contact-us` once `create_lead` exists. |
 | Q5: Email provider | See the decision below. Closes when a real digest reaches the inbox from the running Worker. |
 | Q6: Grass Spider transport | Chosen when Grass Spider is ready to call `create_lead` and `add_facts`. |
-| Q8: Which Claude model | Ed picks after comparing runs. |
 | R1: FastAPI on Python Workers | Discovery in the api repo. |
 | R2: An AI run outlasts one request | Discovery in the api repo. |
 
@@ -53,7 +53,7 @@ This note records the outcome of a review of Product Requirements Document (PRD)
 
 - Repos created in the `andexor` organization: done. Pushed: `andexor-carmen-main` only. The api and ui repos get their content when work begins there.
 - Ed reviews the PRD and the two child PRDs: done.
-- Q answers: Q2, Q3, and Q7 closed. Q1, Q4, Q5, Q6, and Q8 open (see above).
+- Q answers: Q2, Q3, Q7, and Q8 closed. Q1, Q4, Q5, and Q6 open (see above).
 - API contract (`api/carmen-api.openapi.yaml`): not needed. The contract is the specification FastAPI generates from the code (spec 010).
 - Discovery R1 to R3: not started.
 
