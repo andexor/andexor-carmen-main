@@ -92,7 +92,8 @@ company ─┬─ contact
          │             ├─ agreement_service ── service
          │             └─ document     (bytes in R2)
          ├─ activity
-         └─ task
+         ├─ task
+         └─ uptime_check               (one daily check of the website)
 ```
 
 ## Entity-relationship diagrams
@@ -141,6 +142,10 @@ An unanswered criterion has no row. The scoring formulas are in master PRD secti
 | `sort_order`, `active` | Display order, and whether it is suggested |
 
 The table is a hint list, not a constraint. `enrichment_fact.key` has no foreign key to it, so a new key never needs a migration. The API suggests the well-known keys plus any key already used in `enrichment_fact`, for auto-complete. A fact that answers a rubric question is an exact value, usually YES or NO, so the matcher can use it without reading prose. Any fact can also carry optional `notes`. `source_detail` says where a fact came from, such as a URL or a tool name. `check_schemas.py` fails if a rubric question's hint is not a key in the table.
+
+## Uptime checks
+
+`uptime_check` holds one row per check of a company's website, made by the scheduler of `andexor-carmen-api` once a day for `uptime.window_days` days (14). The settings `uptime.sites_per_run` (25) and `uptime.hours_between_checks` (23) say how many sites one run checks and how long a site waits for its next check. `up` is 1 when the site answered with a status below 500; no answer, or 500 and above, is 0. After each check the share of successful checks is stored as the fact `uptime_percent` with the source `UPTIME_CHECK`, when it changed. "Is the site reliably up?" is measured from that fact: `{"yes_at": 99}`.
 
 ## Documents
 
