@@ -35,6 +35,7 @@ entity service
 entity setting
 entity srt
 entity task
+entity uptime_check
 
 activity }o--o| app_user
 activity }o--o| contact
@@ -81,4 +82,5 @@ task }o--o| app_user
 task }o--o| agreement
 task }o--o| deal
 task }o--o| company
+uptime_check }o--|| company
 @enduml
