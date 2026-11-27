@@ -28,12 +28,11 @@ This note records the outcome of a review of Product Requirements Document (PRD)
 | Q5: Email provider | Closed on 2026-11-25. Cloudflare Email Sending; a digest was sent from the running Worker on the preview and tested (see below). The digest from production reached the inbox, confirmed on 2026-11-27 (spec 015). | None. |
 | Q6: Grass Spider transport | Closed on 2026-11-25. The API side is done. The transport was chosen on 2026-11-27: a Service Binding, because Grass Spider will be a Worker (spec 015). No service token is issued for it. | The Grass Spider service is not written yet. When it can measure PageSpeed and CrUX, the request from Carmen to it is specified (spec 015, FR-005). |
 | Q8: Which Claude model | Closed on 2026-11-25. The Claude model is `claude-sonnet-5-5`, for research and for scoring (spec 011). | None. The seed and both databases already hold it. A later change is one edit of `ai_model.model_id` in Settings. |
+| Q4: Contact Us change | Closed on 2026-11-27. `andexor-net-website-contact-us` calls `create_lead` over a Service Binding named `CARMEN` after it stores its own row, in the preview and in production. Checked on 2026-11-27: both databases hold companies whose source is `CONTACT_US` (spec 017). | None. |
 
 ## Still open
 
-| Item | What closes it |
-| --- | --- |
-| Q4: Contact Us change | The API side is done as of 2026-11-25. Closes when `andexor-net-website-contact-us` has been checked and any work it still needs is done. |
+Nothing. Q4 was the last open item and closed on 2026-11-27 (spec 017).
 
 ## Q5: Email provider (closed)
 
@@ -54,7 +53,7 @@ This note records the outcome of a review of Product Requirements Document (PRD)
 
 - Repos created in the `andexor` organization: done. Pushed: `andexor-carmen-main` only. The api and ui repos get their content when work begins there.
 - Ed reviews the PRD and the two child PRDs: done.
-- Q answers: Q1, Q2, Q3, Q5, Q6, Q7, and Q8 closed. Q4 open (see above).
+- Q answers: Q1 to Q8 closed.
 - API contract (`api/carmen-api.openapi.yaml`): not needed. The contract is the specification FastAPI generates from the code (spec 010).
 - Discovery R1 to R3: closed (see above).
 
