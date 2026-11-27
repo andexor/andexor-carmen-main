@@ -25,8 +25,8 @@ This note records the outcome of a review of Product Requirements Document (PRD)
 | R7: Prompt injection from fetched pages | Mitigated by design. Fetched text is untrusted (Principle VII), models get no tools beyond search, and nothing is applied automatically. | api repo: parse model output strictly into fixed fields, and reject output that does not match the schema. |
 | Q3: Jev access | Closed. Access is obtained and the keys exist. | api setup: store the TypeSafe Console key in Secrets Store as `carmen-typesafe-api-key`, then enable the Jev model in Settings. A copy in GitHub secrets is not visible to the Worker. |
 | Q1: The real rubric | Closed on 2026-11-25. Ed read the seeded Fit and Need criteria and accepted them as the rubric (spec 012). | None. Criteria stay editable in the UI. |
-| Q5: Email provider | Closed on 2026-11-25. Cloudflare Email Sending; a digest was sent from the running Worker on the preview and tested (see below). | Test a digest from production. |
-| Q6: Grass Spider transport | Closed on 2026-11-25. The API side is done, and that is as far as it can go for now. | The Grass Spider service that will call the API is not written yet. It may need work when it is. |
+| Q5: Email provider | Closed on 2026-11-25. Cloudflare Email Sending; a digest was sent from the running Worker on the preview and tested (see below). The digest from production reached the inbox, confirmed on 2026-11-27 (spec 015). | None. |
+| Q6: Grass Spider transport | Closed on 2026-11-25. The API side is done. The transport was chosen on 2026-11-27: a Service Binding, because Grass Spider will be a Worker (spec 015). No service token is issued for it. | The Grass Spider service is not written yet. When it can measure PageSpeed and CrUX, the request from Carmen to it is specified (spec 015, FR-005). |
 | Q8: Which Claude model | Closed on 2026-11-25. The Claude model is `claude-sonnet-5-5`, for research and for scoring (spec 011). | None. The seed and both databases already hold it. A later change is one edit of `ai_model.model_id` in Settings. |
 
 ## Still open
@@ -40,7 +40,8 @@ This note records the outcome of a review of Product Requirements Document (PRD)
 - Provider: Cloudflare Email Sending, through the `send_email` binding. Version 1 sends to Ed only.
 - Sending domain: `carmen.andexor.net`. Its records sit on `cf-bounce.carmen.andexor.net` (Mail Exchange (MX) and Sender Policy Framework (SPF)), `cf-bounce._domainkey.carmen.andexor.net` (DomainKeys Identified Mail (DKIM)), and `_dmarc.carmen.andexor.net` (Domain-based Message Authentication, Reporting, and Conformance (DMARC)). The root records belong to Google Workspace and are unchanged.
 - Verified on 2026-11-19: a test email sent with the REST API reached `ed@andexor.net`, and SPF, DKIM, and DMARC all pass.
-- Done on the preview as of 2026-11-25: a digest was sent from the running Worker and tested. Remaining: test a digest from production.
+- Done on the preview as of 2026-11-25: a digest was sent from the running Worker and tested.
+- Done in production as of 2026-11-27: Ed confirmed that the digest reached the inbox. Nothing remains.
 - Manual steps are tracked in `MANUAL-TASKS.md`.
 
 ## Changes to what the PRD says

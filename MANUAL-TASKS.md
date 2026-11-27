@@ -10,7 +10,7 @@ Setup steps that a person must do on a platform such as Cloudflare, GitHub, or G
 
 ## Email (decision Q5)
 
-Cloudflare Email Sending, through the `send_email` binding, to Ed only in version 1. Q5 stays open until the digest reaches the inbox from the running Worker. Adding the `send_email` binding and sending a real digest happens in `andexor-carmen-api`, so it is tracked there, not here.
+Cloudflare Email Sending, through the `send_email` binding, to Ed only in version 1. Q5 is closed: the digest reached the inbox from the running Worker, on the preview and, confirmed on 2026-11-27, in production. Adding the `send_email` binding and sending a real digest happens in `andexor-carmen-api`, so it is tracked there, not here.
 
 - [x] Sending domain: `carmen.andexor.net` (2026-11-19). The records are on `cf-bounce.carmen.andexor.net` (MX, SPF), `cf-bounce._domainkey.carmen.andexor.net` (DKIM), and `_dmarc.carmen.andexor.net`. The root MX, SPF, and DMARC records belong to Google Workspace and are unchanged.
 - [x] `ed@andexor.net` verified as a destination address (2026-11-19).
