@@ -151,6 +151,10 @@ The table is a hint list, not a constraint. `enrichment_fact.key` has no foreign
 
 `document` holds metadata only. The file is an object in the R2 bucket at `r2_key` (`<company_id>/<document_id>`). The API writes the object first, then the row; it deletes the row first, then the object. `sha256` lets a download be verified.
 
+## The version mark of a company's scores
+
+`company.score_token` changes with every write of the company's scores (`fit_score`, `need_score`, `confidence`, `recommendation`, and its `company_service` rows). `andexor-carmen-api` computes scores from the answers and the rubric in three steps: read, compute, write. It notes the mark when it reads, and its write goes through only while the mark is unchanged; otherwise it reads again and redoes its work. So two writers at the same moment can never leave scores that do not follow from the answers. The value is a random text with no meaning, NULL until the first write after the column was added. The column is set by the API alone; it is not a field a person edits.
+
 ## The proposals job of an agreement
 
 `agreement.proposals_started_at` is when the proposals job of the agreement was last put on the queue by `andexor-carmen-api`; NULL means never. A second start within `proposal.reuse_minutes` (60) is refused unless a person asks for a fresh job, and inside that time a job uses a finished research or scoring run of the company again instead of paying for a new one. The column is set by the API alone; it is not a field a person edits.

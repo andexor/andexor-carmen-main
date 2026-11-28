@@ -62,6 +62,7 @@ entity company {
   * created_at : TEXT
   * updated_at : TEXT
     archived_at : TEXT
+    score_token : TEXT
 }
 
 entity company_service {
