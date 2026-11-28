@@ -151,6 +151,10 @@ The table is a hint list, not a constraint. `enrichment_fact.key` has no foreign
 
 `document` holds metadata only. The file is an object in the R2 bucket at `r2_key` (`<company_id>/<document_id>`). The API writes the object first, then the row; it deletes the row first, then the object. `sha256` lets a download be verified.
 
+## The links of a task
+
+A task may name a company, a deal, and an agreement. Its deal and its agreement are under its own company, and a task with a deal or an agreement has a company. The triggers `task_links_ins` and `task_links_upd` refuse any other task with the message `task link outside its company`, for every writer. A deal and an agreement never change company.
+
 ## The version mark of a company's scores
 
 `company.score_token` changes with every write of the company's scores (`fit_score`, `need_score`, `confidence`, `recommendation`, and its `company_service` rows). `andexor-carmen-api` computes scores from the answers and the rubric in three steps: read, compute, write. It notes the mark when it reads, and its write goes through only while the mark is unchanged; otherwise it reads again and redoes its work. So two writers at the same moment can never leave scores that do not follow from the answers. The value is a random text with no meaning, NULL until the first write after the column was added. The column is set by the API alone; it is not a field a person edits.
