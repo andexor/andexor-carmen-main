@@ -36,6 +36,7 @@ entity agreement {
     end_basis : TEXT <<SRT END_BASIS>>
     end_basis_reason : TEXT
     term_months : INTEGER
+    proposals_started_at : TEXT
 }
 
 entity agreement_service {

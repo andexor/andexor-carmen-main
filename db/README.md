@@ -151,6 +151,10 @@ The table is a hint list, not a constraint. `enrichment_fact.key` has no foreign
 
 `document` holds metadata only. The file is an object in the R2 bucket at `r2_key` (`<company_id>/<document_id>`). The API writes the object first, then the row; it deletes the row first, then the object. `sha256` lets a download be verified.
 
+## The proposals job of an agreement
+
+`agreement.proposals_started_at` is when the proposals job of the agreement was last put on the queue by `andexor-carmen-api`; NULL means never. A second start within `proposal.reuse_minutes` (60) is refused unless a person asks for a fresh job, and inside that time a job uses a finished research or scoring run of the company again instead of paying for a new one. The column is set by the API alone; it is not a field a person edits.
+
 ## The renewal policy of an agreement
 
 An agreement's `renewal_policy` says what happens at its end, and it has no default: a person chooses it before the agreement becomes active.
